@@ -1,5 +1,6 @@
 import React from 'react';
 import { Sprout, CheckCircle } from 'lucide-react';
+import mpmLogo from '../../../assets/cover login/logo mpm.webp';
 
 /**
  * Loading screen setelah register — progress bar animasi.
@@ -21,7 +22,7 @@ export function LoadingScreen() {
     <div className="auth-loading-screen">
       <div className="auth-loading-card">
         <div className="auth-loading-logo">
-          <Sprout size={26} strokeWidth={2} />
+          <img className="auth-screen-logo" src={mpmLogo} alt="Logo MPM" />
         </div>
 
         <div className="auth-loading-icon-wrap">

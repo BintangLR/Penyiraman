@@ -19,6 +19,10 @@ import { RegisterForm }        from './components/auth/RegisterForm';
 import { LoadingScreen, SuccessScreen } from './components/auth/AuthScreens';
 import { ProfileDropdown }     from './components/auth/ProfileDropdown';
 import { LogoutConfirmModal }  from './components/auth/LogoutConfirmModal';
+import { WeatherWidget }      from './components/WeatherWidget';
+import { DashboardMoistureChart } from './components/DashboardMoistureChart';
+import { safeTheme, safeTimezone, TIMEZONES, DEFAULT_TIMEZONE } from './services/preferences';
+import mpmLogo from '../assets/cover login/logo mpm.webp';
 
 // Lucide icons
 import {
@@ -26,8 +30,30 @@ import {
   CalendarDays, Bell, Settings, LogOut, Search,
   Droplets, Thermometer, Wifi, Cpu, ChevronRight,
   AlertTriangle, CheckCircle, Waves, Menu, X,
-  Play, Square, Sun, Home,
+  Play, Square, Home,
+  Download,
 } from 'lucide-react';
+
+const NAV_LABELS = {
+  id: { Dashboard: 'Dashboard', Zona: 'Zona', Grafik: 'Grafik', Riwayat: 'Riwayat', Jadwal: 'Jadwal', Notifikasi: 'Notifikasi', Pengaturan: 'Pengaturan' },
+  en: { Dashboard: 'Dashboard', Zona: 'Zones', Grafik: 'Charts', Riwayat: 'History', Jadwal: 'Schedules', Notifikasi: 'Notifications', Pengaturan: 'Settings' },
+};
+
+function readPreferences() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('ics-settings-draft') || '{}');
+    const system = saved.system || {};
+    return {
+      language: system.language === 'English' ? 'en' : 'id',
+      timezone: safeTimezone(localStorage.getItem('ics-timezone') || TIMEZONES[String(system.timezone || 'WITA').split(' ')[0]] || DEFAULT_TIMEZONE),
+      theme: safeTheme(localStorage.getItem('ics-theme') || (system.theme === 'Gelap' ? 'dark' : 'light')),
+      autoRefresh: system.autoRefresh || '5 menit',
+    };
+  } catch { return { language: 'id', timezone: 'Asia/Makassar', theme: 'light', autoRefresh: '5 menit' }; }
+}
+
+const initialPreferences = readPreferences();
+document.documentElement.dataset.theme = initialPreferences.theme;
 
 // ── Nav items ──────────────────────────────────────────────────────
 const navItems = [
@@ -51,8 +77,86 @@ const bottomNavItems = [
 // ── App root ───────────────────────────────────────────────────────
 function App() {
   const { isAuthenticated, authView, enterApp, logout } = useAuth();
-  const { data: dashboard = { zones: [] }, loading: dashboardLoading } = useApi('/dashboard', { zones: [] });
-  const { data: notifications = [] } = useApi('/notifications', []);
+  const [preferences, setPreferences] = React.useState(initialPreferences);
+  const [refreshTick, setRefreshTick] = React.useState(0);
+  const [installPrompt, setInstallPrompt] = React.useState(null);
+  const [isInstalled, setIsInstalled] = React.useState(false);
+  const [installHelpOpen, setInstallHelpOpen] = React.useState(false);
+  React.useEffect(() => {
+    const onPreferencesUpdated = event => {
+      const detail = event.detail || {};
+      setPreferences(current => ({
+        ...current,
+        ...detail,
+        // SettingsPage stores the human-readable language label, while the
+        // shell uses the compact locale key for navigation labels.
+        language: detail.language === 'English' || detail.language === 'en' ? 'en' : 'id',
+        timezone: safeTimezone(detail.timezone || current.timezone),
+        theme: safeTheme(detail.theme || current.theme),
+      }));
+    };
+    window.addEventListener('ics-preferences-updated', onPreferencesUpdated);
+    return () => window.removeEventListener('ics-preferences-updated', onPreferencesUpdated);
+  }, []);
+  React.useEffect(() => {
+    document.documentElement.dataset.theme = preferences.theme;
+    const minutes = Number.parseInt(preferences.autoRefresh, 10);
+    if (!Number.isFinite(minutes)) return undefined;
+    const timer = window.setInterval(() => setRefreshTick(tick => tick + 1), minutes * 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, [preferences.autoRefresh, preferences.theme]);
+  React.useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+        .then(registration => registration.update())
+        .catch(error => console.warn('Service worker tidak dapat didaftarkan:', error));
+    }
+
+    const standalone = window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    setIsInstalled(standalone);
+    const onBeforeInstall = event => {
+      event.preventDefault();
+      setInstallPrompt(event);
+    };
+    const onInstalled = () => {
+      setInstallPrompt(null);
+      setIsInstalled(true);
+    };
+    window.addEventListener('beforeinstallprompt', onBeforeInstall);
+    window.addEventListener('appinstalled', onInstalled);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onBeforeInstall);
+      window.removeEventListener('appinstalled', onInstalled);
+    };
+  }, []);
+
+  async function handleInstallApp() {
+    if (isInstalled) return;
+    if (!installPrompt) {
+      setInstallHelpOpen(true);
+      return;
+    }
+    try {
+      await installPrompt.prompt();
+      const choice = await installPrompt.userChoice;
+      if (choice?.outcome === 'accepted') setInstallPrompt(null);
+    } catch (error) {
+      console.warn('Prompt instalasi tidak dapat dibuka:', error);
+      setInstallHelpOpen(true);
+    }
+  }
+  const { data: dashboard = { zones: [] }, loading: dashboardLoading, error: dashboardError } = useApi(`/dashboard?refresh=${refreshTick}`, { zones: [] });
+  const { data: notifications = [] } = useApi(`/notifications?refresh=${refreshTick}`, []);
+  const { data: persistedSettings } = useApi('/settings', null);
+  React.useEffect(() => {
+    const system = persistedSettings?.system;
+    if (!system) return;
+    const timezone = safeTimezone(TIMEZONES[String(system.timezone || 'WITA').split(' ')[0]] || DEFAULT_TIMEZONE);
+    const next = { language: system.language === 'English' ? 'en' : 'id', timezone, theme: system.theme === 'Gelap' ? 'dark' : 'light', autoRefresh: system.autoRefresh || '5 menit' };
+    setPreferences(current => ({ ...current, ...next }));
+    localStorage.setItem('ics-theme', next.theme);
+    localStorage.setItem('ics-timezone', next.timezone);
+  }, [persistedSettings]);
   const zones = dashboard.zones || [];
 
   const [activeNav,   setActiveNav]   = React.useState('Dashboard');
@@ -64,7 +168,37 @@ function App() {
   const [unreadCount, setUnreadCount] = React.useState(0);
   const [showLogoutModal, setShowLogoutModal] = React.useState(false);
   const [zoneRoute, setZoneRoute] = React.useState(null);
-  React.useEffect(() => setUnreadCount(notifications.filter(n => !n.read).length), [notifications]);
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [searchOpen, setSearchOpen] = React.useState(false);
+  const [searchIndex, setSearchIndex] = React.useState(0);
+  React.useEffect(() => setUnreadCount((Array.isArray(notifications) ? notifications : []).filter(n => !n.read).length), [notifications]);
+
+  const searchResults = React.useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return [];
+    const zoneResults = zones.filter(zone => [zone.name, zone.plant, zone.id, `zona ${zone.id}`].some(value => String(value ?? '').toLowerCase().includes(query)))
+      .map(zone => ({ type: 'zone', id: zone.id, label: `${zone.name || `Zona ${zone.id}`} – ${zone.plant || 'Tanaman belum diatur'}`, detail: `${zone.moisture ?? '—'}% · ${zone.status || 'Status belum tersedia'}` }));
+    const notificationResults = (Array.isArray(notifications) ? notifications : []).filter(item => [item.title, item.description, item.zoneName, item.plant].some(value => String(value ?? '').toLowerCase().includes(query)))
+      .map(item => ({ type: 'notification', id: item.id, label: item.title || 'Notifikasi', detail: item.zoneName || item.description || 'Notifikasi sistem' }));
+    return [...zoneResults, ...notificationResults].slice(0, 8);
+  }, [notifications, searchQuery, zones]);
+
+  function selectSearchResult(result) {
+    if (!result) return;
+    setSearchQuery('');
+    setSearchOpen(false);
+    setSearchIndex(0);
+    if (result.type === 'zone') openZoneDetail(result.id);
+    else navigateTo('Notifikasi');
+  }
+
+  function handleSearchKeyDown(event) {
+    if (!searchOpen || !searchQuery.trim()) return;
+    if (event.key === 'ArrowDown') { event.preventDefault(); setSearchIndex(index => Math.min(index + 1, Math.max(searchResults.length - 1, 0))); }
+    if (event.key === 'ArrowUp') { event.preventDefault(); setSearchIndex(index => Math.max(index - 1, 0)); }
+    if (event.key === 'Enter') { event.preventDefault(); selectSearchResult(searchResults[searchIndex]); }
+    if (event.key === 'Escape') { setSearchOpen(false); }
+  }
 
   function navigateTo(page) {
     setActiveNav(page);
@@ -116,7 +250,7 @@ function App() {
         {/* Brand */}
         <div className="brand">
           <div className="brand-mark">
-            <Sprout size={20} strokeWidth={2} />
+            <img className="brand-mark-logo" src={mpmLogo} alt="Logo MPM" />
           </div>
           <div>
             <div className="brand-title">Irigasi Cerdas</div>
@@ -136,7 +270,7 @@ function App() {
               <span className="nav-icon">
                 <Icon size={18} strokeWidth={1.8} />
               </span>
-              <span style={{ flex: 1 }}>{label}</span>
+              <span style={{ flex: 1 }}>{NAV_LABELS[preferences.language][label]}</span>
               {label === 'Notifikasi' && unreadCount > 0 && (
                 <span className="nav-badge">{unreadCount}</span>
               )}
@@ -147,11 +281,11 @@ function App() {
         {/* Footer */}
         <div className="sidebar-footer">
           <div className="system-status">
-            <span className="online-dot" />
+            <span className={`online-dot ${dashboardError || dashboardLoading ? 'offline' : ''}`} />
             <div className="system-status-text">
-              <strong>Sistem Online</strong>
+              <strong>{dashboardLoading ? (preferences.language === 'en' ? 'Checking system' : 'Memeriksa sistem') : dashboardError ? (preferences.language === 'en' ? 'Connection error' : 'Koneksi bermasalah') : (preferences.language === 'en' ? 'System online' : 'Sistem online')}</strong>
               <small>
-                {new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WITA
+                {new Intl.DateTimeFormat(preferences.language === 'en' ? 'en-GB' : 'id-ID', { hour: '2-digit', minute: '2-digit', timeZone: preferences.timezone }).format(new Date())}
               </small>
             </div>
           </div>
@@ -189,12 +323,36 @@ function App() {
             <Menu size={20} strokeWidth={1.8} />
           </button>
 
+          <div className="search-wrap-container">
           <div className="search-wrap">
             <Search size={15} strokeWidth={1.8} />
-            <input placeholder="Cari zona, tanaman, atau notifikasi..." />
+            <input
+              value={searchQuery}
+              placeholder="Cari zona, tanaman, atau notifikasi..."
+              onChange={event => { setSearchQuery(event.target.value); setSearchOpen(true); setSearchIndex(0); }}
+              onFocus={() => setSearchOpen(true)}
+              onKeyDown={handleSearchKeyDown}
+              aria-label="Cari zona, tanaman, atau notifikasi"
+              aria-controls="global-search-results"
+              aria-expanded={searchOpen}
+            />
+          </div>
+          {searchOpen && searchQuery.trim() && <div id="global-search-results" className="search-results" role="listbox">
+            {searchResults.length ? searchResults.map((result, index) => <button key={`${result.type}-${result.id}`} type="button" className={`search-result ${index === searchIndex ? 'active' : ''}`} role="option" aria-selected={index === searchIndex} onMouseDown={event => event.preventDefault()} onClick={() => selectSearchResult(result)}><span className="search-result-type">{result.type === 'zone' ? 'Zona' : 'Notifikasi'}</span><strong>{result.label}</strong><small>{result.detail}</small></button>) : <div className="search-empty" role="status">Tidak ada hasil ditemukan</div>}
+          </div>}
           </div>
 
           <div className="topbar-right">
+            <button
+              type="button"
+              className="install-app-button"
+              onClick={handleInstallApp}
+              aria-label={isInstalled ? 'Aplikasi sudah terpasang' : 'Download Aplikasi'}
+              title={isInstalled ? 'Aplikasi sudah terpasang' : 'Download Aplikasi'}
+            >
+              <Download size={16} strokeWidth={1.9} />
+              <span>{isInstalled ? 'Terpasang' : 'Download Aplikasi'}</span>
+            </button>
             <button
               className="icon-button"
               aria-label="Notifikasi"
@@ -211,6 +369,33 @@ function App() {
             />
           </div>
         </header>
+
+        {installHelpOpen && (
+          <div className="install-help-overlay" role="presentation" onMouseDown={event => {
+            if (event.target === event.currentTarget) setInstallHelpOpen(false);
+          }}>
+            <section className="install-help-dialog" role="dialog" aria-modal="true" aria-labelledby="install-help-title">
+              <div className="install-help-header">
+                <div>
+                  <span className="install-help-eyebrow">Aplikasi Irigasi Cerdas</span>
+                  <h2 id="install-help-title">Instal aplikasi</h2>
+                </div>
+                <button type="button" className="modal-close-btn" aria-label="Tutup petunjuk instalasi" onClick={() => setInstallHelpOpen(false)}>
+                  <X size={17} />
+                </button>
+              </div>
+              <div className="install-help-body">
+                <p>Prompt instalasi otomatis belum tersedia di browser ini. Aplikasi tetap dapat dipasang melalui menu browser:</p>
+                <ol>
+                  <li>Buka menu browser <strong>⋮</strong> atau tombol berbagi.</li>
+                  <li>Pilih <strong>Instal aplikasi</strong> atau <strong>Tambahkan ke layar utama</strong>.</li>
+                  <li>Konfirmasi pemasangan jika browser memintanya.</li>
+                </ol>
+                <button type="button" className="primary-btn install-help-action" onClick={() => setInstallHelpOpen(false)}>Mengerti</button>
+              </div>
+            </section>
+          </div>
+        )}
 
         {/* Logout modal */}
         {showLogoutModal && (
@@ -231,6 +416,7 @@ function App() {
             onIrrigationToggle={handleIrrigationToggle}
             irrigationSaving={irrigationSaving}
             onGoToZona={() => navigateTo('Zona')}
+            onSelectZone={openZoneDetail}
           />
         )}
 
@@ -253,8 +439,6 @@ function App() {
         {activeNav === 'Notifikasi' && (
           <NotificationPage
             onNavigate={navigateTo}
-            unreadCount={unreadCount}
-            onMarkAllRead={() => setUnreadCount(0)}
           />
         )}
         {activeNav === 'Pengaturan' && <SettingsPage onNavigate={navigateTo} />}
@@ -266,11 +450,11 @@ function App() {
               key={label}
               className={activeNav === label ? 'bottom-item active' : 'bottom-item'}
               onClick={() => navigateTo(label)}
-              aria-label={label}
+              aria-label={NAV_LABELS[preferences.language][label]}
               aria-current={activeNav === label ? 'page' : undefined}
             >
               <Icon size={20} strokeWidth={activeNav === label ? 2 : 1.8} />
-              <small>{shortLabel}</small>
+              <small>{label === 'Dashboard' && preferences.language === 'id' ? 'Beranda' : NAV_LABELS[preferences.language][label]}</small>
             </button>
           ))}
         </nav>
@@ -280,8 +464,13 @@ function App() {
 }
 
 // ── Dashboard Page ─────────────────────────────────────────────────
-function DashboardPage({ zones, loading, selectedZone, setSelectedZone, irrigating, onIrrigationToggle, irrigationSaving, onGoToZona }) {
+function DashboardPage({ zones, loading, selectedZone, setSelectedZone, irrigating, onIrrigationToggle, irrigationSaving, onGoToZona, onSelectZone }) {
   if (loading) return <section className="content"><div className="empty-state">Memuat dashboard dari database...</div></section>;
+  const selectedZoneId = Number(String(selectedZone).match(/\d+/)?.[0] || 1);
+  const selectedZoneData = zones.find(zone => Number(zone.id) === selectedZoneId);
+  const sensorCount = zones.reduce((total, zone) => total + (zone.sensors?.length || 0), 0);
+  const onlineSensorCount = zones.reduce((total, zone) => total + (zone.sensors || []).filter(sensor => sensor.status !== 'Offline').length, 0);
+  const onlineZoneCount = zones.filter(zone => zone.deviceStatus === 'Online').length;
   return (
     <section className="content">
       {/* Page heading */}
@@ -291,50 +480,7 @@ function DashboardPage({ zones, loading, selectedZone, setSelectedZone, irrigati
           <h1>Dashboard</h1>
           <p>Pantau kondisi lahan dan kendalikan penyiraman dari jarak jauh.</p>
         </div>
-        <div className="weather-card">
-          <Sun size={24} color="#f59e0b" strokeWidth={1.8} />
-          <div>
-            <span>Cerah, Toraja</span>
-            <strong>30°C</strong>
-          </div>
-        </div>
-      </div>
-
-      {/* KPI Stats */}
-      <div className="stat-grid">
-        <StatCard
-          icon={<Map size={20} strokeWidth={1.8} />}
-          label="Total Zona"
-          value={zones.length}
-          meta="Zona aktif"
-        />
-        <StatCard
-          icon={<Cpu size={20} strokeWidth={1.8} />}
-          label="Total Sensor"
-          value={zones.reduce((total, zone) => total + (zone.sensors?.length || 0), 0)}
-          meta="Sensor terhubung"
-        />
-        <StatCard
-          icon={<AlertTriangle size={20} strokeWidth={1.8} />}
-          label="Zona Kering"
-          value={zones.filter(z => (z.status || z.state) === 'Kering').length}
-          meta="Perlu perhatian"
-          tone="danger"
-        />
-        <StatCard
-          icon={<CheckCircle size={20} strokeWidth={1.8} />}
-          label="Zona Normal"
-          value={zones.filter(z => (z.status || z.state) === 'Normal').length}
-          meta="Kondisi stabil"
-          tone="success"
-        />
-        <StatCard
-          icon={<Waves size={20} strokeWidth={1.8} />}
-          label="Zona Basah"
-          value={zones.filter(z => (z.status || z.state) === 'Basah').length}
-          meta="Terpantau"
-          tone="blue"
-        />
+        <WeatherWidget />
       </div>
 
       {/* Dashboard grid */}
@@ -350,15 +496,18 @@ function DashboardPage({ zones, loading, selectedZone, setSelectedZone, irrigati
           <div className="field-map">
             <div className="field-sky" />
             {zones.map((zone, i) => (
-              <div
+              <button
+                type="button"
                 key={zone.id}
                 className={`field-cell ${(zone.state || zone.status || '').toLowerCase()}`}
                 style={{ '--i': i }}
-                title={`Zona ${zone.id} – ${zone.name || zone.plant}: ${zone.moisture}% (${zone.state || zone.status})`}
+                onClick={() => onSelectZone(zone.id)}
+                title={`Zona ${zone.id} – ${zone.plant || 'Tanaman belum diatur'}: ${zone.moisture}% (${zone.state || zone.status})`}
               >
                 <span>Z{zone.id}</span>
-                <small>{zone.name || zone.plant}</small>
-              </div>
+                <small>{zone.plant || 'Tanaman belum diatur'}</small>
+                <em>{zone.moisture}% · {zone.state || zone.status}</em>
+              </button>
             ))}
           </div>
           <div className="legend">
@@ -375,9 +524,10 @@ function DashboardPage({ zones, loading, selectedZone, setSelectedZone, irrigati
             subtitle="Semua zona · 7 hari terakhir"
             action="Detail grafik"
           />
-          <MoistureChartDashboard />
+          <DashboardMoistureChart data={zones} />
         </section>
 
+        <div className="dashboard-lower-layout">
         {/* Quick control */}
         <section className="card quick-card">
           <CardHeader title="Kontrol Cepat" subtitle="Penyiraman manual" />
@@ -399,7 +549,9 @@ function DashboardPage({ zones, loading, selectedZone, setSelectedZone, irrigati
               <strong>{selectedZone}</strong>
               <small>Siap dikontrol</small>
             </div>
-            <span className="status-pill success">Online</span>
+            <span className={`status-pill ${selectedZoneData?.deviceStatus === 'Online' ? 'success' : 'warning'}`}>
+              {selectedZoneData?.deviceStatus || 'Tidak diketahui'}
+            </span>
           </div>
 
           <button
@@ -423,7 +575,7 @@ function DashboardPage({ zones, loading, selectedZone, setSelectedZone, irrigati
         <section className="card zones-card">
           <CardHeader
             title="Ringkasan Kondisi Zona"
-            subtitle="Kelembapan terbaru"
+            subtitle="Kelembapan terbaru dari 9 zona"
             action="Kelola zona"
             onAction={onGoToZona}
           />
@@ -436,13 +588,14 @@ function DashboardPage({ zones, loading, selectedZone, setSelectedZone, irrigati
         <section className="card status-card">
           <CardHeader title="Status Sistem" subtitle="Koneksi perangkat" />
           <div className="system-status-grid">
-            <StatusItem icon={<Cpu size={16} strokeWidth={1.8} />}    title="ESP32"    value="Online" />
-            <StatusItem icon={<Wifi size={16} strokeWidth={1.8} />}   title="MySQL" value="Terhubung" />
-            <StatusItem icon={<Droplets size={16} strokeWidth={1.8} />} title="Sensor" value="27 / 27" />
-            <StatusItem icon={<Settings size={16} strokeWidth={1.8} />} title="Valve"  value="Siaga" />
+            <StatusItem icon={<Cpu size={16} strokeWidth={1.8} />} title="ESP32" value={onlineZoneCount ? `${onlineZoneCount} zona online` : 'Tidak diketahui'} tone={onlineZoneCount ? 'success' : 'warning'} />
+            <StatusItem icon={<Wifi size={16} strokeWidth={1.8} />} title="MySQL" value={loading ? 'Memuat' : 'Terhubung'} tone={loading ? 'warning' : 'success'} />
+            <StatusItem icon={<Droplets size={16} strokeWidth={1.8} />} title="Sensor" value={`${onlineSensorCount} / ${sensorCount} online`} tone={onlineSensorCount === sensorCount ? 'success' : 'warning'} />
+            <StatusItem icon={<Settings size={16} strokeWidth={1.8} />} title="Valve" value={irrigating ? 'Berjalan' : 'Siaga'} tone={irrigating ? 'warning' : 'success'} />
           </div>
-          <div className="last-sync">Sinkronisasi terakhir · 08:57 WITA</div>
+          <div className="last-sync">Sinkronisasi terakhir tidak tersedia dari API.</div>
         </section>
+        </div>
       </div>
 
       {/* Mobile irrigation button */}
@@ -464,19 +617,6 @@ function DashboardPage({ zones, loading, selectedZone, setSelectedZone, irrigati
 
 // ── Reusable dashboard components ─────────────────────────────────
 
-function StatCard({ icon, label, value, meta, tone }) {
-  return (
-    <div className="stat-card">
-      <div className={`stat-icon ${tone || ''}`}>{icon}</div>
-      <div>
-        <span>{label}</span>
-        <strong>{value}</strong>
-        <small>{meta}</small>
-      </div>
-    </div>
-  );
-}
-
 function CardHeader({ title, subtitle, action, onAction }) {
   return (
     <div className="card-header">
@@ -495,22 +635,24 @@ function CardHeader({ title, subtitle, action, onAction }) {
 
 function ZoneRow({ zone }) {
   const state = zone.state || zone.status || 'Normal';
+  const zoneLabel = zone.name && zone.plant ? `${zone.name} – ${zone.plant}` : (zone.name || zone.plant || `Zona ${zone.id}`);
   return (
     <div className="zone-row">
       <div className="zone-number">Z{zone.id}</div>
       <div className="zone-name">
-        <strong>{zone.name || zone.plant}</strong>
+        <strong>{zoneLabel}</strong>
         <small>{zone.sensors?.length || 0} sensor</small>
       </div>
       <div className={`zone-state ${state.toLowerCase()}`}>
         <strong>{zone.moisture}%</strong>
         <small>{state}</small>
       </div>
+      <span className={`zone-status-dot ${state.toLowerCase()}`} aria-label={`Status ${state}`} />
     </div>
   );
 }
 
-function StatusItem({ icon, title, value }) {
+function StatusItem({ icon, title, value, tone = 'success' }) {
   return (
     <div className="status-item">
       <span className="status-item-icon">{icon}</span>
@@ -518,7 +660,7 @@ function StatusItem({ icon, title, value }) {
         <strong>{title}</strong>
         <small>{value}</small>
       </div>
-      <span className="online-dot" style={{ marginLeft: 'auto' }} />
+      <span className={`status-dot ${tone}`} style={{ marginLeft: 'auto' }} />
     </div>
   );
 }
@@ -575,7 +717,10 @@ function MoistureChartDashboard() {
   );
 }
 
-createRoot(document.getElementById('root')).render(
+const rootElement = document.getElementById('root');
+const appRoot = globalThis.__irigasiCerdasRoot || createRoot(rootElement);
+globalThis.__irigasiCerdasRoot = appRoot;
+appRoot.render(
   <AuthProvider>
     <App />
   </AuthProvider>

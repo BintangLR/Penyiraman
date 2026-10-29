@@ -1,9 +1,11 @@
 import React from 'react';
-import { NOTIF_TYPE_CONFIG } from '../../data/notificationData';
+import { ChevronRight } from 'lucide-react';
+import { getNotificationConfig } from '../../data/notificationData';
 
 /** Satu baris item notifikasi */
 export function NotificationItem({ item, isSelected, onClick }) {
-  const cfg = NOTIF_TYPE_CONFIG[item.type] || NOTIF_TYPE_CONFIG.system;
+  const cfg = getNotificationConfig(item);
+  const Icon = cfg.icon;
 
   return (
     <button
@@ -18,13 +20,13 @@ export function NotificationItem({ item, isSelected, onClick }) {
     >
       {/* Icon */}
       <div className="notif-item-icon" style={{ background: cfg.bg }}>
-        <span style={{ color: cfg.color, fontSize: 18 }}>{cfg.icon}</span>
+        <Icon size={20} strokeWidth={1.8} color={cfg.color} aria-hidden="true" />
       </div>
 
       {/* Body */}
       <div className="notif-item-body">
-        <div className="notif-item-title">{item.title}</div>
-        <div className="notif-item-desc">{item.description}</div>
+        <div className="notif-item-title">{item.title || 'Notifikasi'}</div>
+        <div className="notif-item-desc">{item.description || 'Informasi sistem irigasi'}</div>
         <div className="notif-item-meta">
           <span>{item.date} {item.time}</span>
           <span
@@ -36,7 +38,7 @@ export function NotificationItem({ item, isSelected, onClick }) {
       </div>
 
       {/* Arrow */}
-      <span className="notif-item-arrow" aria-hidden="true">›</span>
+      <ChevronRight className="notif-item-arrow" size={18} strokeWidth={1.8} aria-hidden="true" />
     </button>
   );
 }

@@ -3,10 +3,11 @@ import { AlertTriangle, Bell, Cpu, CheckCircle } from 'lucide-react';
 
 /** 4 summary card ringkasan notifikasi */
 export function NotificationSummary({ items }) {
-  const warning = items.filter(n => n.category === 'Peringatan').length;
-  const info    = items.filter(n => n.category === 'Penyiraman').length;
-  const system  = items.filter(n => n.category === 'Sistem').length;
-  const done    = items.filter(n => n.read).length;
+  const list = Array.isArray(items) ? items : [];
+  const warning = list.filter(n => n.category === 'Peringatan').length;
+  const info    = list.filter(n => n.category === 'Penyiraman').length;
+  const system  = list.filter(n => n.category === 'Sistem').length;
+  const done    = list.filter(n => n.read).length;
 
   const cards = [
     { icon: AlertTriangle, value: warning, label: 'Peringatan',         sub: 'Perlu ditindaklanjuti', bg: '#fdeeee', ic: '#d63f3f' },

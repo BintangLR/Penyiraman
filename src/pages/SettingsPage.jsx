@@ -72,15 +72,28 @@ export function SettingsPage({ onNavigate }) {
     setNotifs(next.notifs);
   }, [savedSettings]);
 
+  React.useEffect(() => {
+    const theme = system.theme === 'Gelap' ? 'dark' : 'light';
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem('ics-theme', theme);
+  }, [system.theme]);
+
+  React.useEffect(() => {
+    const timezone = { 'WIB (UTC+7)': 'Asia/Jakarta', 'WITA (UTC+8)': 'Asia/Makassar', 'WIT (UTC+9)': 'Asia/Jayapura' }[system.timezone] || 'Asia/Makassar';
+    localStorage.setItem('ics-timezone', timezone);
+    window.dispatchEvent(new CustomEvent('ics-preferences-updated', { detail: { timezone, autoRefresh: system.autoRefresh, language: system.language } }));
+  }, [system.timezone, system.autoRefresh, system.language]);
+
+  React.useEffect(() => {
+    if (error) console.warn('Pengaturan belum dapat dimuat dari database:', error);
+  }, [error]);
+
   React.useEffect(() => () => clearTimeout(saveTimerRef.current), []);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   function persistSettings(next) {
     settingsRef.current = next;
-    clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => {
-      api.put('/settings', next).catch(error => console.error('Gagal menyimpan pengaturan:', error));
-    }, 400);
+    localStorage.setItem('ics-settings-draft', JSON.stringify(next));
   }
 
   function updateSetting(section, key, val) {
@@ -107,10 +120,15 @@ export function SettingsPage({ onNavigate }) {
   function handleWateringChange(key, val){ updateSetting('watering', key, val); }
   function handleNotifChange(key, val)   { updateSetting('notifs', key, val); }
 
-  function flashSave(setter) {
+  async function flashSave(setter) {
     persistSettings(settingsRef.current);
-    setter(true);
-    setTimeout(() => setter(false), 2000);
+    try {
+      await api.put('/settings', settingsRef.current);
+      setter(true);
+      setTimeout(() => setter(false), 2000);
+    } catch (saveError) {
+      console.error('Gagal menyimpan pengaturan:', saveError);
+    }
   }
 
   function handleDataAction(key) {
@@ -164,7 +182,7 @@ export function SettingsPage({ onNavigate }) {
     setWatering(next.watering);
     setNotifs(next.notifs);
     clearTimeout(saveTimerRef.current);
-    api.put('/settings', next);
+    api.put('/settings', next).catch(saveError => console.error('Gagal mereset pengaturan:', saveError));
     setResetOpen(false);
   }
 
@@ -192,7 +210,7 @@ export function SettingsPage({ onNavigate }) {
       </div>
     );
     if (activeTab === 'pengguna') return (
-      <div className="set-single-col">
+      <div className="set-user-grid">
         <AccountSettings account={account} onChange={handleAccountChange}
           onSave={() => flashSave(setSavedAcc)} saved={savedAcc} />
         <UserSettings onOpen={() => setActiveTab('pengguna')} />
@@ -228,15 +246,14 @@ export function SettingsPage({ onNavigate }) {
   }
 
   return (
-    <section className="content">
+    <section className="content settings-page">
       {loading && <div className="empty-state">Memuat pengaturan dari database...</div>}
-      {error && <div className="empty-state">Database belum terhubung: {error}</div>}
       {/* ── Header ──────────────────────────────────────────────────────── */}
-      <div style={{ marginBottom: 16 }}>
-        <div className="eyebrow">KONFIGURASI SISTEM</div>
-        <h1>Pengaturan</h1>
+      <div className="settings-page-header">
+        <div className="eyebrow">{system.language === 'English' ? 'SYSTEM CONFIGURATION' : 'KONFIGURASI SISTEM'}</div>
+        <h1>{system.language === 'English' ? 'Settings' : 'Pengaturan'}</h1>
         <p style={{ margin: '4px 0 0', fontSize: 12, color: '#779185' }}>
-          Kelola akun, konfigurasi dasar sistem, dan preferensi aplikasi.
+          {system.language === 'English' ? 'Manage your account, system configuration, and application preferences.' : 'Kelola akun, konfigurasi dasar sistem, dan preferensi aplikasi.'}
         </p>
       </div>
 
@@ -250,7 +267,7 @@ export function SettingsPage({ onNavigate }) {
             onClick={() => setActiveTab(t.key)}
             type="button"
           >
-            {t.label}
+            {system.language === 'English' ? ({ umum: 'General', zona: 'Zones & Plants', sensor: 'Sensors & Devices', notif: 'Notifications', sistem: 'System', pengguna: 'Users' }[t.key]) : t.label}
           </button>
         ))}
       </div>

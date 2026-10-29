@@ -1,0 +1,20 @@
+{
+  "name": "Penyiraman Otomatis YMPM",
+  "short_name": "Penyiraman YMPM",
+  "description": "PWA monitoring dan kontrol irigasi otomatis Lahan Toraja.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#1F6B3A",
+  "background_color": "#F4F8EF",
+  "lang": "id",
+  "icons": [
+    {
+      "src": "/logo-mobile.webp",
+      "sizes": "717x718",
+      "type": "image/webp",
+      "purpose": "any"
+    }
+  ]
+}

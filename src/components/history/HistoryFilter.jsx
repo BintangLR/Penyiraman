@@ -1,24 +1,24 @@
 import React from 'react';
-import { Calendar, Search } from 'lucide-react';
-import { ZONE_OPTIONS, PLANT_OPTIONS, STATUS_OPTIONS } from '../../data/historyData';
+import { RotateCcw, Search } from 'lucide-react';
+import { DateRangePicker } from '../graphics/DateRangePicker';
 
 /** Panel filter riwayat: tanggal, zona, tanaman, status */
-export function HistoryFilter({ filters, onChange, onApply, onReset }) {
+export function HistoryFilter({ filters, onChange, onApply, onReset, zones, plants, statuses }) {
   return (
     <div className="hist-filter-bar">
       {/* Periode */}
-      <div className="hist-filter-field">
-        <label className="hist-filter-label">Periode Tanggal</label>
+      <div className="hist-filter-field hist-date-filter-field">
+        <label className="hist-filter-label" htmlFor="hist-date-range">Periode Tanggal</label>
         <div className="hist-date-input">
-          <span style={{ color: '#779185' }}><Calendar size={14} strokeWidth={1.8} /></span>
-          <input
-            id="hist-date-range"
-            type="text"
-            value={filters.dateRange}
-            onChange={e => onChange('dateRange', e.target.value)}
-            placeholder="14 Sep 2025 – 20 Sep 2025"
-            readOnly
-            style={{ cursor: 'pointer', minWidth: 170 }}
+          <DateRangePicker
+            key={`${filters.startDate.getTime()}-${filters.endDate.getTime()}`}
+            buttonId="hist-date-range"
+            startDate={filters.startDate}
+            endDate={filters.endDate}
+            onApply={(startDate, endDate) => {
+              onChange('startDate', startDate);
+              onChange('endDate', endDate);
+            }}
           />
         </div>
       </div>
@@ -29,10 +29,11 @@ export function HistoryFilter({ filters, onChange, onApply, onReset }) {
         <select
           id="hist-filter-zone"
           className="hist-filter-select"
-          value={filters.zone}
-          onChange={e => onChange('zone', e.target.value)}
+          value={filters.zoneId}
+          onChange={e => onChange('zoneId', e.target.value)}
         >
-          {ZONE_OPTIONS.map(z => <option key={z} value={z}>{z}</option>)}
+          <option value="all">Semua Zona</option>
+          {zones.map(zone => <option key={zone.id} value={String(zone.id)}>{zone.label}</option>)}
         </select>
       </div>
 
@@ -45,7 +46,8 @@ export function HistoryFilter({ filters, onChange, onApply, onReset }) {
           value={filters.plant}
           onChange={e => onChange('plant', e.target.value)}
         >
-          {PLANT_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
+          <option value="all">Semua Tanaman</option>
+          {plants.map(plant => <option key={plant} value={plant}>{plant}</option>)}
         </select>
       </div>
 
@@ -58,7 +60,8 @@ export function HistoryFilter({ filters, onChange, onApply, onReset }) {
           value={filters.status}
           onChange={e => onChange('status', e.target.value)}
         >
-          {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+          <option value="all">Semua Status</option>
+          {statuses.map(status => <option key={status} value={status}>{status}</option>)}
         </select>
       </div>
 
@@ -67,18 +70,18 @@ export function HistoryFilter({ filters, onChange, onApply, onReset }) {
         <button
           id="btn-hist-apply"
           className="primary-btn"
-          style={{ width: 'auto', padding: '9px 16px', fontSize: 11, whiteSpace: 'nowrap' }}
+          style={{ width: 'auto', padding: '9px 16px', fontSize: 11, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 7 }}
           onClick={onApply}
         >
-          <Search size={14} strokeWidth={1.8} /> Tampilkan Data
+          <Search size={18} strokeWidth={1.8} /> Tampilkan Data
         </button>
         <button
           id="btn-hist-reset"
           className="secondary-btn"
           onClick={onReset}
-          style={{ padding: '9px 14px', fontSize: 11 }}
+          style={{ padding: '9px 14px', fontSize: 11, display: 'flex', alignItems: 'center', gap: 7 }}
         >
-          Reset
+          <RotateCcw size={18} strokeWidth={1.8} /> Reset
         </button>
       </div>
     </div>

@@ -21,6 +21,9 @@ export function ProfileDropdown({ onLogoutRequest, onGoSettings }) {
 
   if (!currentUser) return null;
 
+  const displayName = currentUser.name?.trim() || 'Pengguna';
+  const displayRole = currentUser.role?.trim() || 'Peran belum tersedia';
+
   return (
     <div ref={ref} className="profile-dropdown-wrap">
       {/* Trigger */}
@@ -34,10 +37,10 @@ export function ProfileDropdown({ onLogoutRequest, onGoSettings }) {
         aria-expanded={open}
         aria-label="Menu profil pengguna"
       >
-        <UserAvatar name={currentUser.name} size="md" />
+        <UserAvatar name={displayName} size="md" />
         <div className="profile-copy">
-          <strong>{currentUser.name}</strong>
-          <span>{currentUser.role}</span>
+          <strong title={displayName}>{displayName}</strong>
+          <span>{displayRole}</span>
         </div>
         <ChevronDown
           size={14}
@@ -56,15 +59,15 @@ export function ProfileDropdown({ onLogoutRequest, onGoSettings }) {
         <div className="profile-menu" role="menu">
           {/* User info */}
           <div className="profile-menu-header">
-            <UserAvatar name={currentUser.name} size="lg" />
+            <UserAvatar name={displayName} size="lg" />
             <div style={{ minWidth: 0 }}>
               <div style={{
                 fontWeight: 700, fontSize: 13, color: '#17372b',
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
               }}>
-                {currentUser.name}
+                {displayName}
               </div>
-              <div style={{ fontSize: 11, color: '#779185' }}>{currentUser.role}</div>
+              <div style={{ fontSize: 11, color: '#779185' }}>{displayRole}</div>
               <div style={{
                 fontSize: 10, color: '#a0b8ae', marginTop: 1,
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',

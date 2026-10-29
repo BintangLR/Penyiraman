@@ -6,9 +6,12 @@ import { PER_PAGE_OPTIONS } from '../../data/historyData';
  * Komponen pagination interaktif.
  * Props: currentPage, totalItems, perPage, onPageChange, onPerPageChange
  */
-export function Pagination({ currentPage, totalItems, perPage, onPageChange, onPerPageChange }) {
-  const totalPages = Math.ceil(totalItems / perPage);
-  const from = (currentPage - 1) * perPage + 1;
+export function Pagination({
+  currentPage, totalItems, perPage, onPageChange, onPerPageChange,
+  perPageOptions = PER_PAGE_OPTIONS, pageSizeId = 'per-page-select', itemLabel = 'data',
+}) {
+  const totalPages = Math.max(1, Math.ceil(totalItems / perPage));
+  const from = totalItems === 0 ? 0 : (currentPage - 1) * perPage + 1;
   const to = Math.min(currentPage * perPage, totalItems);
 
   // Build page numbers to display
@@ -28,7 +31,7 @@ export function Pagination({ currentPage, totalItems, perPage, onPageChange, onP
   return (
     <div className="pagination-bar">
       <span className="pagination-info">
-        Menampilkan <strong>{from}–{to}</strong> dari <strong>{totalItems}</strong> data
+        Menampilkan <strong>{from}–{to}</strong> dari <strong>{totalItems}</strong> {itemLabel}
       </span>
 
       <div className="pagination-controls">
@@ -60,7 +63,7 @@ export function Pagination({ currentPage, totalItems, perPage, onPageChange, onP
         {/* Next */}
         <button
           className="page-btn"
-          disabled={currentPage === totalPages}
+          disabled={currentPage >= totalPages}
           onClick={() => onPageChange(currentPage + 1)}
           aria-label="Halaman berikutnya"
         >
@@ -71,13 +74,13 @@ export function Pagination({ currentPage, totalItems, perPage, onPageChange, onP
       {/* Per-page selector */}
       <div className="per-page-wrap">
         <select
-          id="per-page-select"
+          id={pageSizeId}
           className="hist-filter-select"
           style={{ width: 'auto', padding: '6px 28px 6px 10px' }}
           value={perPage}
           onChange={e => { onPerPageChange(Number(e.target.value)); onPageChange(1); }}
         >
-          {PER_PAGE_OPTIONS.map(n => (
+          {perPageOptions.map(n => (
             <option key={n} value={n}>{n} per halaman</option>
           ))}
         </select>

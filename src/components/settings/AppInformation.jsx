@@ -1,4 +1,5 @@
 import React from 'react';
+import mpmLogo from '../../../assets/cover login/logo mpm.webp';
 
 /** Card Informasi Sistem / Aplikasi */
 export function AppInformation() {
@@ -11,7 +12,9 @@ export function AppInformation() {
 
       {/* Logo + nama */}
       <div className="set-app-info-hero">
-        <div className="set-app-logo">🌿</div>
+        <div className="set-app-logo">
+          <img className="set-app-logo-image" src={mpmLogo} alt="Logo MPM" />
+        </div>
         <div>
           <div style={{ fontWeight: 800, fontSize: 16, color: '#17372b', letterSpacing: '-.03em' }}>Irigasi Cerdas</div>
           <div style={{ fontSize: 11, color: '#779185', marginTop: 2 }}>Lahan Toraja</div>

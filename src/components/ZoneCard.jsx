@@ -1,12 +1,30 @@
 import React from 'react';
 import { ZoneStatusBadge, MoistureBar } from './ZoneStatusBadge';
 import { Sprout, Cpu, Clock, ArrowRight } from 'lucide-react';
+import { getPlantImage, getPlantImageFallback } from '../data/plantImages';
 
 /**
  * Card zona lahan — tampil di halaman grid Zona Lahan.
  */
 export function ZoneCard({ zone, onClick }) {
   const [imgError, setImgError] = React.useState(false);
+  const preferredImage = getPlantImage(zone);
+  const fallbackImage = getPlantImageFallback(zone)
+    || (zone.image && zone.image !== preferredImage ? zone.image : '');
+  const [imageSrc, setImageSrc] = React.useState(preferredImage);
+
+  React.useEffect(() => {
+    setImageSrc(preferredImage);
+    setImgError(false);
+  }, [preferredImage]);
+
+  function handleImageError() {
+    if (fallbackImage && imageSrc !== fallbackImage) {
+      setImageSrc(fallbackImage);
+      return;
+    }
+    setImgError(true);
+  }
 
   return (
     <article
@@ -21,11 +39,11 @@ export function ZoneCard({ zone, onClick }) {
       <div className="zone-card-img-wrap">
         {!imgError ? (
           <img
-            src={zone.image}
-            alt={`Lahan tanaman ${zone.plant}`}
+            src={imageSrc}
+            alt={`Tanaman ${zone.plant}`}
             className="zone-card-img"
             loading="lazy"
-            onError={() => setImgError(true)}
+            onError={handleImageError}
           />
         ) : (
           <div className="zone-card-img-fallback">

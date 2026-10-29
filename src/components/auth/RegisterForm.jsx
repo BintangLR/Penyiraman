@@ -1,14 +1,29 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { PasswordInput } from '../auth/PasswordInput';
-import { Sprout, Layout, Settings, Users, ArrowLeft } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+import registerCover from '../../../assets/cover login/gambar 1.jpeg';
+import { AuthMarketingPanel, AUTH_PAGE_BACKGROUND } from './AuthMarketingPanel';
 
-const BG = 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1400&q=80';
-
-const FEATURES = [
-  { icon: Layout,   title: 'Mudah Digunakan',   sub: 'Antarmuka sederhana dan intuitif' },
-  { icon: Settings, title: 'Kelola Semua Zona',  sub: 'Pantau, atur, dan analisis dalam satu aplikasi' },
-  { icon: Users,    title: 'Dukungan Penuh',     sub: 'Solusi untuk pertanian yang lebih baik' },
+const REGISTER_SLIDES = [
+  {
+    title: 'Bergabung Bersama Kami',
+    description: 'Buat akun untuk mulai menggunakan sistem irigasi cerdas dan mengelola lahan dengan lebih mudah di Tanah Toraja.',
+    features: [
+      { title: 'Mudah Digunakan', description: 'Antarmuka sederhana dan intuitif.' },
+      { title: 'Kelola Zona', description: 'Pantau kondisi setiap zona lahan.' },
+      { title: 'Monitoring Terpadu', description: 'Akses informasi kelembapan dalam satu aplikasi.' },
+    ],
+  },
+  {
+    title: 'Mari Wujudkan Pertanian Berkelanjutan',
+    description: 'Dukung pengelolaan air yang lebih efisien dan pertanian yang tangguh menghadapi perubahan kondisi lingkungan.',
+    features: [
+      { title: 'Efisiensi Air', description: 'Gunakan air sesuai kebutuhan tanaman.' },
+      { title: 'Informasi Aktual', description: 'Pantau kondisi kelembapan tanah.' },
+      { title: 'Pertanian Berkelanjutan', description: 'Dukung produktivitas lahan dalam jangka panjang.' },
+    ],
+  },
 ];
 
 export function RegisterForm() {
@@ -42,68 +57,20 @@ export function RegisterForm() {
   }
 
   return (
+    <div className="auth-page" style={{ backgroundImage: `url(${AUTH_PAGE_BACKGROUND})` }}>
     <div className="auth-shell">
-      {/* Left */}
-      <div className="auth-left" style={{ backgroundImage: `url(${BG})` }}>
-        <div className="auth-left-overlay" />
-        <div className="auth-left-content">
-          <div className="auth-brand">
-            <div className="auth-brand-icon">
-              <Sprout size={22} strokeWidth={2} />
-            </div>
-            <div>
-              <div className="auth-brand-name">Irigasi Cerdas</div>
-              <div className="auth-brand-sub">Lahan Toraja</div>
-            </div>
-          </div>
-
-          <h1 className="auth-headline">Bergabung<br />Bersama Kami</h1>
-          <p className="auth-tagline">
-            Buat akun baru untuk mulai menggunakan sistem irigasi cerdas
-            dan kelola lahan Anda dengan lebih mudah.
-          </p>
-
-          <div className="auth-features">
-            {FEATURES.map(({ icon: Icon, title, sub }) => (
-              <div key={title} className="auth-feature-item">
-                <div className="auth-feature-icon">
-                  <Icon size={18} strokeWidth={1.8} />
-                </div>
-                <div>
-                  <div className="auth-feature-title">{title}</div>
-                  <div className="auth-feature-sub">{sub}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      <AuthMarketingPanel
+        cover={registerCover}
+        slides={REGISTER_SLIDES}
+        imageAlt="Pemandangan pertanian Toraja"
+        mobileTitle="Join us today!"
+        mobileDescription="Buat akun untuk mulai menggunakan sistem irigasi cerdas Lahan Toraja."
+      />
 
       {/* Right */}
       <div className="auth-right">
-        <div className="auth-card">
-          {/* Back button (mobile only) */}
-          <button
-            type="button"
-            className="auth-back-btn"
-            onClick={() => setAuthView('login')}
-            aria-label="Kembali ke halaman masuk"
-          >
-            <ArrowLeft size={15} strokeWidth={2} /> Kembali
-          </button>
-
-          {/* Mini brand */}
-          <div className="auth-card-brand">
-            <div className="auth-brand-icon-sm">
-              <Sprout size={18} strokeWidth={2} />
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 13, color: '#17372b' }}>Irigasi Cerdas</div>
-              <div style={{ fontSize: 11, color: '#779185' }}>Lahan Toraja</div>
-            </div>
-          </div>
-
-          <h2 className="auth-card-title">Buat Akun Baru</h2>
+      <div className="auth-card">
+        <h2 className="auth-card-title">Buat Akun Baru</h2>
           <p className="auth-card-sub">Lengkapi data berikut untuk mendaftar.</p>
 
           <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -177,7 +144,12 @@ export function RegisterForm() {
               disabled={loading}
               style={{ marginTop: 4 }}
             >
-              {loading ? <span className="auth-spinner" /> : 'Buat Akun'}
+              {loading ? <span className="auth-spinner" /> : (
+                <>
+                  <span>Daftar Sekarang</span>
+                  <ArrowRight className="auth-button-arrow" size={18} aria-hidden="true" />
+                </>
+              )}
             </button>
           </form>
 
@@ -186,14 +158,16 @@ export function RegisterForm() {
             <button
               id="btn-go-login"
               type="button"
-              className="auth-link auth-link-inline"
+              className="auth-link auth-link-inline auth-register-login-link"
               onClick={() => setAuthView('login')}
             >
-              Masuk di sini
+              <span className="auth-register-login-label-desktop">Masuk Sekarang</span>
+              <span className="auth-register-login-label-mobile">Login Sekarang</span>
             </button>
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }

@@ -18,7 +18,14 @@ const AuthContext = React.createContext(null);
 export function AuthProvider({ children }) {
 
   /** Aplikasi selalu dimulai dari login; kredensial diverifikasi oleh API MySQL. */
-  const [currentUser, setCurrentUser] = React.useState(null);
+  const [currentUser, setCurrentUser] = React.useState(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
 
   /** isAuthenticated = turunan dari currentUser, bukan state terpisah */
   const isAuthenticated = Boolean(currentUser);

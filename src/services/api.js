@@ -7,8 +7,17 @@ async function request(path, options = {}) {
     headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
     ...options,
   });
-  if (!response.ok) throw new Error(`API ${response.status}: ${await response.text()}`);
-  return response.status === 204 ? null : response.json();
+  const contentType = response.headers.get('content-type') || '';
+  const body = await response.text();
+  if (!response.ok) {
+    const detail = body.trim() && contentType.includes('application/json')
+      ? (() => { try { return JSON.parse(body).message; } catch { return body.trim(); } })()
+      : body.trim();
+    throw new Error(`API ${response.status}${detail ? `: ${detail}` : ''}`);
+  }
+  if (response.status === 204 || !body.trim()) return null;
+  if (!contentType.includes('application/json')) throw new Error('Respons API bukan JSON yang valid.');
+  try { return JSON.parse(body); } catch { throw new Error('Respons API berisi JSON yang tidak valid.'); }
 }
 
 export const api = {
@@ -25,7 +34,7 @@ export function useApi(path, initialValue) {
   React.useEffect(() => {
     let active = true;
     setLoading(true);
-    api.get(path).then(value => active && setData(value))
+    api.get(path).then(value => { if (active) { setData(value); setError(''); } })
       .catch(err => active && setError(err.message))
       .finally(() => active && setLoading(false));
     return () => { active = false; };

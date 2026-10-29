@@ -4,24 +4,25 @@ import { Download, Check } from 'lucide-react';
 import { Pagination } from './Pagination';
 
 /** Tabel riwayat (desktop) + card list (mobile) + pagination */
-export function HistoryTable({ data, totalItems, currentPage, perPage, onPageChange, onPerPageChange, onDetail, onExport, exportDone }) {
+export function HistoryTable({ data, totalItems, currentPage, perPage, onPageChange, onPerPageChange, onDetail, onExport, exportDone, loading }) {
   return (
     <div className="graph-card" style={{ padding: 0 }}>
       {/* Card header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '16px 20px', borderBottom: '1px solid #f0f5f2', flexWrap: 'wrap' }}>
         <div>
           <h2 className="graph-card-title">Daftar Riwayat Penyiraman</h2>
-          <p className="graph-card-sub">{totalItems} total record ditemukan</p>
+          <p className="graph-card-sub">{loading ? 'Memuat riwayat...' : `${totalItems} total record ditemukan`}</p>
         </div>
         <button
           id="btn-export-riwayat"
           className="secondary-btn"
+          disabled={loading}
           style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 11, padding: '8px 14px' }}
           onClick={onExport}
         >
           {exportDone 
             ? <><Check size={14} strokeWidth={2} /> Diekspor!</>
-            : <><Download size={14} strokeWidth={1.8} /> Export Data</>}
+            : <><Download size={18} strokeWidth={1.8} /> Export Data</>}
         </button>
       </div>
 
@@ -42,7 +43,9 @@ export function HistoryTable({ data, totalItems, currentPage, perPage, onPageCha
             </tr>
           </thead>
           <tbody>
-            {data.length === 0 ? (
+            {loading ? (
+              <tr><td colSpan={9} role="status" style={{ textAlign: 'center', padding: '36px 0', color: '#557267', fontSize: 12 }}>Memuat riwayat penyiraman...</td></tr>
+            ) : data.length === 0 ? (
               <tr>
                 <td colSpan={9} style={{ textAlign: 'center', padding: '36px 0', color: '#95a8a0', fontSize: 12 }}>
                   Tidak ada data yang sesuai filter.
@@ -62,7 +65,9 @@ export function HistoryTable({ data, totalItems, currentPage, perPage, onPageCha
 
       {/* ── Mobile cards ─────────────────────────────────────────────── */}
       <div className="hist-mobile-list">
-        {data.length === 0 ? (
+        {loading ? (
+          <div role="status" style={{ textAlign: 'center', padding: '36px 0', color: '#557267', fontSize: 12 }}>Memuat riwayat penyiraman...</div>
+        ) : data.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '36px 0', color: '#95a8a0', fontSize: 12 }}>
             Tidak ada data yang sesuai filter.
           </div>

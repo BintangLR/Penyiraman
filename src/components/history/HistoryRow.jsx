@@ -1,5 +1,5 @@
 import React from 'react';
-import { Eye, ChevronRight, Droplets, Droplet, Clock } from 'lucide-react';
+import { Eye, Droplets, Droplet, Clock } from 'lucide-react';
 
 /** Badge status penyiraman */
 export function StatusBadge({ status }) {
@@ -62,7 +62,7 @@ export function HistoryRow({ row, index, onDetail }) {
           title="Lihat detail"
           aria-label={`Detail penyiraman ${row.zoneName}`}
         >
-          <Eye size={16} strokeWidth={1.8} />
+          <Eye size={18} strokeWidth={1.8} />
         </button>
       </td>
     </tr>
@@ -86,7 +86,7 @@ export function HistoryMobileCard({ row, onDetail }) {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <StatusBadge status={row.status} />
-          <button className="hist-action-btn" onClick={() => onDetail(row)} aria-label="Detail"><ChevronRight size={14} strokeWidth={2} /></button>
+          <button className="hist-action-btn" onClick={() => onDetail(row)} aria-label={`Detail penyiraman ${row.zoneName}`}><Eye size={18} strokeWidth={1.8} /></button>
         </div>
       </div>
       <div className="hist-mobile-card-body">

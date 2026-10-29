@@ -1,25 +1,28 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { PasswordInput } from '../auth/PasswordInput';
-import { Sprout, Droplets, TrendingUp, Leaf } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+import loginCover from '../../../assets/cover login/gambar 1.jpeg';
+import { AuthMarketingPanel, AUTH_PAGE_BACKGROUND } from './AuthMarketingPanel';
 
-const BG = 'https://images.unsplash.com/photo-1555400038-63f5ba517a47?w=1400&q=80';
-
-const FEATURES = [
+const LOGIN_SLIDES = [
   {
-    icon: Leaf,
-    title: 'Monitoring Real-time',
-    sub: 'Pantau kondisi lahan kapan saja dan di mana saja',
+    title: 'Pertanian Lebih Cerdas untuk Toraja',
+    description: 'Sistem irigasi pintar untuk mendukung pertanian yang lebih produktif, efisien, dan berkelanjutan di Tanah Toraja.',
+    features: [
+      { title: 'Monitoring Real-time', description: 'Pantau data lahan secara langsung.' },
+      { title: 'Pantau Kondisi Lahan dengan Mudah', description: 'Cek kondisi setiap zona dengan praktis.' },
+      { title: 'Kelola Irigasi Lebih Efisien', description: 'Dukung produktivitas pertanian Toraja.' },
+    ],
   },
   {
-    icon: Droplets,
-    title: 'Penggunaan Air Efisien',
-    sub: 'Penyiraman otomatis sesuai kebutuhan tanaman',
-  },
-  {
-    icon: TrendingUp,
-    title: 'Tingkatkan Produktivitas',
-    sub: 'Pertanian lebih maju, efisien, dan berkelanjutan',
+    title: 'Mari Wujudkan Pertanian Berkelanjutan',
+    description: 'Dukung pengelolaan air yang lebih efisien dan pertanian yang tangguh menghadapi perubahan kondisi lingkungan.',
+    features: [
+      { title: 'Efisiensi Air', description: 'Gunakan air sesuai kebutuhan tanaman.' },
+      { title: 'Informasi Aktual', description: 'Pantau kondisi kelembapan tanah.' },
+      { title: 'Pertanian Berkelanjutan', description: 'Dukung produktivitas lahan dalam jangka panjang.' },
+    ],
   },
 ];
 
@@ -52,62 +55,19 @@ export function LoginForm() {
   }
 
   return (
+    <div className="auth-page" style={{ backgroundImage: `url(${AUTH_PAGE_BACKGROUND})` }}>
     <div className="auth-shell">
-      {/* Left panel */}
-      <div className="auth-left" style={{ backgroundImage: `url(${BG})` }}>
-        <div className="auth-left-overlay" />
-        <div className="auth-left-content">
-          {/* Brand */}
-          <div className="auth-brand">
-            <div className="auth-brand-icon">
-              <Sprout size={22} strokeWidth={2} />
-            </div>
-            <div>
-              <div className="auth-brand-name">Irigasi Cerdas</div>
-              <div className="auth-brand-sub">Lahan Toraja</div>
-            </div>
-          </div>
-
-          <h1 className="auth-headline">
-            Pertanian Lebih<br />Cerdas untuk Toraja
-          </h1>
-          <p className="auth-tagline">
-            Sistem irigasi pintar untuk mendukung pertanian yang lebih produktif,
-            efisien, dan berkelanjutan di Tana Toraja.
-          </p>
-
-          <div className="auth-features">
-            {FEATURES.map(({ icon: Icon, title, sub }) => (
-              <div key={title} className="auth-feature-item">
-                <div className="auth-feature-icon">
-                  <Icon size={18} strokeWidth={1.8} />
-                </div>
-                <div>
-                  <div className="auth-feature-title">{title}</div>
-                  <div className="auth-feature-sub">{sub}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      <AuthMarketingPanel
+        cover={loginCover}
+        slides={LOGIN_SLIDES}
+        imageAlt="Pemandangan pertanian Toraja"
+        mobileTitle="Welcome back!"
+        mobileDescription="Masuk untuk mengakses sistem irigasi cerdas Lahan Toraja."
+      />
 
       {/* Right: form */}
       <div className="auth-right">
         <div className="auth-card">
-          {/* Mini brand */}
-          <div className="auth-card-brand">
-            <div className="auth-brand-icon-sm">
-              <Sprout size={18} strokeWidth={2} />
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 13, color: '#17372b' }}>
-                Irigasi Cerdas
-              </div>
-              <div style={{ fontSize: 11, color: '#779185' }}>Lahan Toraja</div>
-            </div>
-          </div>
-
           <h2 className="auth-card-title">Selamat Datang</h2>
           <p className="auth-card-sub">
             Masuk untuk mengakses sistem irigasi cerdas Lahan Toraja.
@@ -173,7 +133,13 @@ export function LoginForm() {
               disabled={loading}
               style={{ marginTop: 20 }}
             >
-              {loading ? <span className="auth-spinner" /> : 'Masuk ke Dashboard'}
+              {loading ? <span className="auth-spinner" /> : (
+                <>
+                  <span className="auth-submit-label-desktop">Masuk ke Dashboard</span>
+                  <span className="auth-submit-label-mobile">Login</span>
+                  <ArrowRight className="auth-button-arrow" size={18} aria-hidden="true" />
+                </>
+              )}
             </button>
           </form>
 
@@ -188,6 +154,7 @@ export function LoginForm() {
           </button>
         </div>
       </div>
+    </div>
     </div>
   );
 }

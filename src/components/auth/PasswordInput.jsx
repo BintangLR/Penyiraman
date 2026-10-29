@@ -25,7 +25,6 @@ export function PasswordInput({ id, value, onChange, placeholder, label, error }
           className="auth-eye-btn"
           onClick={() => setShow(v => !v)}
           aria-label={show ? 'Sembunyikan password' : 'Tampilkan password'}
-          tabIndex={-1}
         >
           {show
             ? <EyeOff size={15} strokeWidth={1.8} />

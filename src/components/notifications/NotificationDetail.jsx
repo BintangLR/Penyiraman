@@ -1,18 +1,20 @@
 import React from 'react';
-import { NOTIF_TYPE_CONFIG } from '../../data/notificationData';
+import { AlertTriangle, Bell, CalendarDays, Droplets, Settings, Sprout, X } from 'lucide-react';
+import { getNotificationConfig } from '../../data/notificationData';
 
 /** Detail panel notifikasi — ditampilkan di sebelah kanan (desktop) atau modal (mobile) */
 export function NotificationDetail({ item, onClose, onNavigate }) {
   if (!item) return (
     <div className="notif-detail-empty">
-      <div style={{ fontSize: 48, opacity: .25 }}>🔔</div>
+      <Bell size={38} strokeWidth={1.5} color="#076653" style={{ opacity: .35 }} aria-hidden="true" />
       <div style={{ fontSize: 12, color: '#95a8a0', marginTop: 10, textAlign: 'center' }}>
         Pilih notifikasi untuk<br />melihat detail
       </div>
     </div>
   );
 
-  const cfg = NOTIF_TYPE_CONFIG[item.type] || NOTIF_TYPE_CONFIG.system;
+  const cfg = getNotificationConfig(item);
+  const Icon = cfg.icon;
   const isWarning = item.type === 'warning';
   const hasZone   = item.zoneId && item.image;
 
@@ -28,13 +30,13 @@ export function NotificationDetail({ item, onClose, onNavigate }) {
       {/* Header */}
       <div className="notif-detail-header">
         <h3 className="notif-detail-heading">Detail Notifikasi</h3>
-        <button className="modal-close-btn" onClick={onClose} aria-label="Tutup detail">✕</button>
+        <button className="modal-close-btn" onClick={onClose} aria-label="Tutup detail"><X size={16} strokeWidth={2} /></button>
       </div>
 
       {/* Notification title block */}
       <div className="notif-detail-title-block">
         <div className="notif-detail-icon" style={{ background: cfg.bg }}>
-          <span style={{ color: cfg.color, fontSize: 22 }}>{cfg.icon}</span>
+          <Icon size={22} strokeWidth={1.8} color={cfg.color} aria-hidden="true" />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className="notif-detail-title">{item.title}</div>
@@ -51,7 +53,8 @@ export function NotificationDetail({ item, onClose, onNavigate }) {
 
         {isWarning && (
           <div className="notif-warning-box">
-            ⚠ Disarankan untuk segera melakukan penyiraman atau menunggu penyiraman otomatis sesuai jadwal.
+            <AlertTriangle size={17} strokeWidth={1.8} aria-hidden="true" />
+            <span>Disarankan untuk segera melakukan penyiraman atau menunggu penyiraman otomatis sesuai jadwal.</span>
           </div>
         )}
       </div>
@@ -113,31 +116,31 @@ export function NotificationDetail({ item, onClose, onNavigate }) {
           {isWarning && (
             <button className="primary-btn notif-action-btn" type="button" onClick={() => handleAction('jadwal')}
               id="btn-notif-siram">
-              💧 Siram Sekarang
+              <Droplets size={17} strokeWidth={1.8} /> Siram Sekarang
             </button>
           )}
           {(item.type === 'warning' || item.type === 'schedule') && (
             <button className="secondary-btn notif-action-btn" type="button" onClick={() => handleAction('jadwal')}
               id="btn-notif-jadwal">
-              📅 Lihat Jadwal
+              <CalendarDays size={17} strokeWidth={1.8} /> Lihat Jadwal
             </button>
           )}
           {item.type === 'watering' && (
             <button className="secondary-btn notif-action-btn" type="button" onClick={() => handleAction('riwayat')}
               id="btn-notif-riwayat">
-              📋 Lihat Riwayat
+              <CalendarDays size={17} strokeWidth={1.8} /> Lihat Riwayat
             </button>
           )}
           {(item.type === 'system' || item.type === 'skip') && (
             <button className="secondary-btn notif-action-btn" type="button" onClick={() => handleAction('settings')}
               id="btn-notif-perangkat">
-              ⚙ Lihat Perangkat
+              <Settings size={17} strokeWidth={1.8} /> Lihat Perangkat
             </button>
           )}
           {item.type === 'normal' && (
             <button className="secondary-btn notif-action-btn" type="button" onClick={() => handleAction('zona')}
               id="btn-notif-zona">
-              🌱 Lihat Zona
+              <Sprout size={17} strokeWidth={1.8} /> Lihat Zona
             </button>
           )}
         </div>

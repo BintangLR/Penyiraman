@@ -2,6 +2,10 @@
  * Data dummy notifikasi — 22 records.
  * Struktur siap diganti dengan Firebase Realtime Database.
  */
+import {
+  AlertTriangle, CalendarClock, CalendarX, Droplet, Droplets,
+  Settings, ShieldAlert, Sprout, ThermometerSun, Wifi,
+} from 'lucide-react';
 
 export const NOTIFICATION_DATA = [
   // Peringatan
@@ -31,13 +35,32 @@ export const NOTIFICATION_DATA = [
 
 // Config kategori: icon, warna, label
 export const NOTIF_TYPE_CONFIG = {
-  warning:  { icon:'⚠', bg:'#fdeeee', color:'#d63f3f', label:'Peringatan'    },
-  watering: { icon:'💧', bg:'#e9f3ff', color:'#2878d6', label:'Penyiraman'   },
-  schedule: { icon:'⏰', bg:'#fff4e5', color:'#b45309', label:'Jadwal'       },
-  normal:   { icon:'🌱', bg:'#e9f7ef', color:'#10a67a', label:'Kondisi Lahan'},
-  system:   { icon:'⚙', bg:'#f3f0ff', color:'#7c3aed', label:'Sistem'       },
-  skip:     { icon:'⏭', bg:'#f0f5f2', color:'#5a7a6e', label:'Sistem'       },
+  warning:  { icon:AlertTriangle, bg:'#fdeeee', color:'#d63f3f', label:'Peringatan' },
+  watering: { icon:Droplets, bg:'#e9f3ff', color:'#2878d6', label:'Penyiraman' },
+  schedule: { icon:CalendarClock, bg:'#fff4e5', color:'#b45309', label:'Jadwal' },
+  normal:   { icon:Sprout, bg:'#e9f7ef', color:'#076653', label:'Kondisi Lahan' },
+  system:   { icon:Settings, bg:'#f3f0ff', color:'#6d45b5', label:'Sistem' },
+  skip:     { icon:CalendarX, bg:'#fff4e5', color:'#b45309', label:'Sistem' },
 };
+
+export function getNotificationConfig(item) {
+  const notification = item || {};
+  const base = NOTIF_TYPE_CONFIG[notification.type] || NOTIF_TYPE_CONFIG.system;
+  const title = String(notification.title || '');
+  if (notification.type === 'warning' && /suhu tinggi/i.test(title)) {
+    return { ...base, icon: ThermometerSun, bg: '#fff4e5', color: '#b45309' };
+  }
+  if (notification.type === 'warning' && /volume air tinggi/i.test(title)) {
+    return { ...base, icon: Droplet, bg: '#fff4e5', color: '#b45309' };
+  }
+  if (notification.type === 'system' && /koneksi esp32 stabil|online kembali/i.test(title)) {
+    return { ...base, icon: Wifi, bg: '#e9f7ef', color: '#076653' };
+  }
+  if (notification.type === 'system' && /offline/i.test(title)) {
+    return { ...base, icon: ShieldAlert, bg: '#fdeeee', color: '#d63f3f' };
+  }
+  return base;
+}
 
 // Tab filter options
 export const NOTIF_TABS = [

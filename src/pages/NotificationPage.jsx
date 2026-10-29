@@ -4,67 +4,17 @@ import { NotificationSummary } from '../components/notifications/NotificationSum
 import { NotificationTabs } from '../components/notifications/NotificationTabs';
 import { NotificationItem } from '../components/notifications/NotificationItem';
 import { NotificationDetail } from '../components/notifications/NotificationDetail';
-import { Check, ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
+import { Pagination } from '../components/history/Pagination';
 
 const PER_PAGE_OPTIONS = [8, 16];
-
-/** Mini Pagination — standalone agar tidak tergantung historyData */
-function NotifPagination({ currentPage, totalItems, perPage, onPageChange, onPerPageChange }) {
-  const totalPages = Math.ceil(totalItems / perPage);
-  const from = totalItems === 0 ? 0 : (currentPage - 1) * perPage + 1;
-  const to   = Math.min(currentPage * perPage, totalItems);
-
-  const pages = Array.from({ length: Math.min(totalPages, 7) }, (_, i) => i + 1);
-
-  return (
-    <div className="pagination-bar">
-      <span className="pagination-info">
-        Menampilkan {from}–{to} dari {totalItems} notifikasi
-      </span>
-      <div className="pagination-pages">
-        <button
-          className="page-btn" disabled={currentPage === 1}
-          onClick={() => onPageChange(currentPage - 1)} aria-label="Prev"
-        ><ChevronLeft size={14} strokeWidth={2} /></button>
-        {pages.map(p => (
-          <button key={p}
-            className={currentPage === p ? 'page-btn active' : 'page-btn'}
-            onClick={() => onPageChange(p)}
-          >{p}</button>
-        ))}
-        {totalPages > 7 && <span className="page-ellipsis">…</span>}
-        {totalPages > 7 && (
-          <button
-            className={currentPage === totalPages ? 'page-btn active' : 'page-btn'}
-            onClick={() => onPageChange(totalPages)}
-          >{totalPages}</button>
-        )}
-        <button
-          className="page-btn" disabled={currentPage === totalPages || totalPages === 0}
-          onClick={() => onPageChange(currentPage + 1)} aria-label="Next"
-        ><ChevronRight size={14} strokeWidth={2} /></button>
-      </div>
-      <div className="per-page-wrap">
-        <select
-          id="notif-per-page"
-          className="per-page-select"
-          value={perPage}
-          onChange={e => onPerPageChange(Number(e.target.value))}
-        >
-          {PER_PAGE_OPTIONS.map(n => (
-            <option key={n} value={n}>{n} per halaman</option>
-          ))}
-        </select>
-      </div>
-    </div>
-  );
-}
 
 /**
  * Halaman Notifikasi — dua kolom: list kiri + detail panel kanan.
  */
-export function NotificationPage({ onNavigate, unreadCount, onMarkAllRead }) {
+export function NotificationPage({ onNavigate }) {
   const { data: items = [], setData: setItems, loading, error } = useApi('/notifications', []);
+  const notificationItems = Array.isArray(items) ? items : [];
   const [selected, setSelected] = React.useState(null);
 
   // Filters
@@ -82,7 +32,7 @@ export function NotificationPage({ onNavigate, unreadCount, onMarkAllRead }) {
 
   // ── Filter + sort ───────────────────────────────────────────────────────────
   const filtered = React.useMemo(() => {
-    let list = [...items];
+    let list = [...notificationItems];
 
     if (activeTab !== 'all') list = list.filter(n => n.category === activeTab);
     if (statusFilter === 'unread') list = list.filter(n => !n.read);
@@ -90,10 +40,10 @@ export function NotificationPage({ onNavigate, unreadCount, onMarkAllRead }) {
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(n =>
-        n.title.toLowerCase().includes(q) ||
-        n.description.toLowerCase().includes(q) ||
-        (n.zoneName && n.zoneName.toLowerCase().includes(q)) ||
-        (n.plant && n.plant.toLowerCase().includes(q))
+        String(n.title || '').toLowerCase().includes(q) ||
+        String(n.description || '').toLowerCase().includes(q) ||
+        String(n.zoneName || '').toLowerCase().includes(q) ||
+        String(n.plant || '').toLowerCase().includes(q)
       );
     }
     if (sortBy === 'newest') list.sort((a, b) => b.id - a.id);
@@ -101,7 +51,7 @@ export function NotificationPage({ onNavigate, unreadCount, onMarkAllRead }) {
     if (sortBy === 'unread') list.sort((a, b) => (a.read ? 1 : 0) - (b.read ? 1 : 0));
 
     return list;
-  }, [items, activeTab, statusFilter, search, sortBy]);
+  }, [notificationItems, activeTab, statusFilter, search, sortBy]);
 
   const totalItems = filtered.length;
   const pageData   = filtered.slice((currentPage - 1) * perPage, currentPage * perPage);
@@ -109,16 +59,10 @@ export function NotificationPage({ onNavigate, unreadCount, onMarkAllRead }) {
   // ── Handlers ────────────────────────────────────────────────────────────────
   function handleSelect(item) {
     // Mark as read
-    api.put(`/notification/${item.id}`, { read: true }).then(updated => setItems(prev => prev.map(n => n.id === item.id ? updated : n)));
+    api.put(`/notification/${item.id}`, { read: true }).then(updated => setItems(prev => (Array.isArray(prev) ? prev : []).map(n => n.id === item.id ? updated : n)));
     const updated = { ...item, read: true };
     setSelected(updated);
     setMobileDetail(true);
-  }
-
-  function handleMarkAllRead() {
-    Promise.all(items.filter(n => !n.read).map(n => api.put(`/notification/${n.id}`, { read: true }))).then(() => setItems(prev => prev.map(n => ({ ...n, read: true }))));
-    if (selected) setSelected(s => s ? { ...s, read: true } : null);
-    onMarkAllRead && onMarkAllRead();
   }
 
   function handleTabChange(tab) {
@@ -130,12 +74,10 @@ export function NotificationPage({ onNavigate, unreadCount, onMarkAllRead }) {
   // Sync selected item if items change
   React.useEffect(() => {
     if (selected) {
-      const fresh = items.find(n => n.id === selected.id);
+      const fresh = notificationItems.find(n => n.id === selected.id);
       if (fresh) setSelected(fresh);
     }
-  }, [items]);
-
-  const localUnread = items.filter(n => !n.read).length;
+  }, [notificationItems, selected]);
 
   return (
     <section className="content">
@@ -150,28 +92,14 @@ export function NotificationPage({ onNavigate, unreadCount, onMarkAllRead }) {
             Pantau semua informasi penting terkait kondisi lahan, penyiraman, dan sistem irigasi.
           </p>
         </div>
-        <button
-          id="btn-mark-all-read"
-          className="secondary-btn"
-          style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 11, padding: '8px 16px', whiteSpace: 'nowrap', flexShrink: 0 }}
-          onClick={handleMarkAllRead}
-          disabled={localUnread === 0}
-        >
-          <Check size={14} strokeWidth={2} /> Tandai Semua Dibaca
-          {localUnread > 0 && (
-            <span style={{ background: '#e44b4b', color: '#fff', fontSize: 9, fontWeight: 800, padding: '1px 6px', borderRadius: 999 }}>
-              {localUnread}
-            </span>
-          )}
-        </button>
       </div>
 
       {/* ── Summary ────────────────────────────────────────────────────────── */}
-      <NotificationSummary items={items} />
+      <NotificationSummary items={notificationItems} />
 
       {/* ── Tabs + filters ─────────────────────────────────────────────────── */}
       <NotificationTabs
-        items={items}
+        items={notificationItems}
         activeTab={activeTab}
         onTabChange={handleTabChange}
         sortBy={sortBy}
@@ -223,12 +151,15 @@ export function NotificationPage({ onNavigate, unreadCount, onMarkAllRead }) {
 
             {/* Pagination */}
             <div style={{ borderTop: '1px solid #f0f5f2', padding: '12px 16px' }}>
-              <NotifPagination
+              <Pagination
                 currentPage={currentPage}
                 totalItems={totalItems}
                 perPage={perPage}
                 onPageChange={p => setCurrentPage(p)}
                 onPerPageChange={n => { setPerPage(n); setCurrentPage(1); }}
+                perPageOptions={PER_PAGE_OPTIONS}
+                pageSizeId="notif-per-page"
+                itemLabel="notifikasi"
               />
             </div>
           </div>

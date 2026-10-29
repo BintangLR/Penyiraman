@@ -1,4 +1,5 @@
 import React from 'react';
+import { Droplets } from 'lucide-react';
 import { ALL_DAYS, ALL_ZONES } from '../../data/scheduleData';
 
 const FLOW_RATE = 1.2;
@@ -129,7 +130,7 @@ export function ScheduleForm({ open, initial, onSave, onClose }) {
 
             {/* Estimasi air (read-only) */}
             <div className="sched-form-est-box">
-              <span>💧 Estimasi Air Digunakan</span>
+              <span className="sched-form-est-label"><Droplets size={20} strokeWidth={1.8} aria-hidden="true" /> Estimasi Air Digunakan</span>
               <strong>± {estimated} Liter</strong>
               <span style={{ fontSize: 9, color: '#a0b8ae' }}>({form.duration} menit × {FLOW_RATE} L/mnt)</span>
             </div>

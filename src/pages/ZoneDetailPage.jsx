@@ -6,6 +6,7 @@ import { WateringRecommendation } from '../components/WateringRecommendation';
 import { PlantInformation } from '../components/PlantInformation';
 import { MoistureChart } from '../components/MoistureChart';
 import { EditZoneModal } from '../components/EditZoneModal';
+import { getPlantGalleryImages, getPlantImage, getPlantImageFallback } from '../data/plantImages';
 import { ArrowLeft, Pencil, Droplets, Thermometer, Clock, Sprout } from 'lucide-react';
 
 /**
@@ -22,10 +23,15 @@ export function ZoneDetailPage({ zoneId, onBack, onZoneUpdate, onNavigate }) {
   // Data zona datang secara asynchronous. Jangan membaca zone.image sebelum API selesai.
   const [activeImg, setActiveImg] = React.useState('');
   const [imgError, setImgError] = React.useState(false);
+  const [usingFallbackImage, setUsingFallbackImage] = React.useState(false);
 
   // Sinkronkan jika zoneId berubah
   React.useEffect(() => {
-    if (zone) { setActiveImg(zone.image); setImgError(false); }
+    if (zone) {
+      setActiveImg(getPlantImage(zone));
+      setImgError(false);
+      setUsingFallbackImage(false);
+    }
   }, [zoneId, zone]);
 
   function handleSave(updated) {
@@ -59,7 +65,12 @@ export function ZoneDetailPage({ zoneId, onBack, onZoneUpdate, onNavigate }) {
   if (loading) return <section className="content"><div className="empty-state">Memuat detail zona dari database...</div></section>;
   if (error || !zone) return <section className="content"><div className="empty-state">Data zona tidak ditemukan: {error}</div></section>;
 
-  const allImages = [zone.image, ...(zone.additionalImages || [])].filter(Boolean);
+  const preferredImage = getPlantImage(zone);
+  const configuredFallback = getPlantImageFallback(zone);
+  const fallbackImage = configuredFallback || (zone.image && zone.image !== preferredImage ? zone.image : '');
+  const allImages = [preferredImage, ...getPlantGalleryImages(zone)]
+    .filter(Boolean)
+    .filter((image, index, images) => images.indexOf(image) === index);
   const sensors = Array.isArray(zone.sensors) ? zone.sensors : [];
   const moistureHistory = Array.isArray(zone.moistureHistory) && zone.moistureHistory.length > 1
     ? zone.moistureHistory
@@ -112,9 +123,16 @@ export function ZoneDetailPage({ zoneId, onBack, onZoneUpdate, onNavigate }) {
               {!imgError ? (
                 <img
                   src={activeImg}
-                  alt={`Lahan ${zone.plant}`}
+                  alt={`Tanaman ${zone.plant}`}
                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                  onError={() => setImgError(true)}
+                  onError={() => {
+                    if (fallbackImage && !usingFallbackImage) {
+                      setUsingFallbackImage(true);
+                      setActiveImg(fallbackImage);
+                    } else {
+                      setImgError(true);
+                    }
+                  }}
                 />
               ) : (
                 <div style={{
@@ -139,7 +157,21 @@ export function ZoneDetailPage({ zoneId, onBack, onZoneUpdate, onNavigate }) {
                     onClick={() => { setActiveImg(img); setImgError(false); }}
                     aria-label={`Foto ${i + 1}`}
                   >
-                    <img src={img} alt="" onError={e => { e.target.style.display = 'none'; }} />
+                    <img
+                      src={img}
+                      alt={`Thumbnail tanaman ${zone.plant}`}
+                      onError={e => {
+                        const fallback = img === fallbackImage
+                          ? (zone.image && zone.image !== img ? zone.image : preferredImage)
+                          : fallbackImage;
+                        if (fallback && fallback !== img) {
+                          e.currentTarget.onerror = () => { e.currentTarget.style.display = 'none'; };
+                          e.currentTarget.src = fallback;
+                        } else {
+                          e.currentTarget.style.display = 'none';
+                        }
+                      }}
+                    />
                   </button>
                 ))}
               </div>
@@ -226,17 +258,6 @@ export function ZoneDetailPage({ zoneId, onBack, onZoneUpdate, onNavigate }) {
           {/* Informasi tanaman */}
           <PlantInformation zone={zone} onEdit={() => setShowEdit(true)} />
 
-          {/* Navigasi antar zona */}
-          <div className="detail-card">
-            <h3 style={{ margin: '0 0 12px', fontSize: 13, fontWeight: 750, letterSpacing: '-.02em' }}>
-              Zona Lainnya
-            </h3>
-            <div style={{ display: 'grid', gap: 6 }}>
-              <button className="text-button" onClick={onBack} style={{ fontSize: 10, textAlign: 'left', paddingTop: 4 }}>
-                Kembali ke daftar zona →
-              </button>
-            </div>
-          </div>
         </div>
       </div>
 

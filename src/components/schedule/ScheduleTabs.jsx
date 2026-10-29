@@ -8,7 +8,7 @@ const TABS = [
 ];
 
 /** Filter tabs + sort dropdown */
-export function ScheduleTabs({ schedules, activeTab, onTabChange, sortBy, onSortChange }) {
+export function ScheduleTabs({ schedules, activeTab, onTabChange, sortBy, onSortChange, onAdd }) {
   const counts = {
     all:      schedules.length,
     active:   schedules.filter(s => s.active).length,
@@ -31,17 +31,26 @@ export function ScheduleTabs({ schedules, activeTab, onTabChange, sortBy, onSort
         ))}
       </div>
 
-      <div className="sched-sort-wrap">
-        <span style={{ fontSize: 10, color: '#779185', fontWeight: 700, whiteSpace: 'nowrap' }}>Urutkan</span>
-        <select
-          id="sched-sort-select"
-          className="hist-filter-select"
-          style={{ minWidth: 'auto', padding: '6px 10px', fontSize: 10 }}
-          value={sortBy}
-          onChange={e => onSortChange(e.target.value)}
+      <div className="sched-controls-row">
+        <div className="sched-sort-wrap">
+          <span style={{ fontSize: 10, color: '#779185', fontWeight: 700, whiteSpace: 'nowrap' }}>Urutkan</span>
+          <select
+            id="sched-sort-select"
+            className="hist-filter-select"
+            style={{ minWidth: 'auto', padding: '6px 10px', fontSize: 10 }}
+            value={sortBy}
+            onChange={e => onSortChange(e.target.value)}
+          >
+            {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
+        <button
+          id="btn-tambah-jadwal"
+          className="primary-btn sched-add-button"
+          onClick={onAdd}
         >
-          {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
+          <span aria-hidden="true">+</span> Tambah Jadwal
+        </button>
       </div>
     </div>
   );

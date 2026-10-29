@@ -3,25 +3,28 @@ import { NOTIF_TABS, SORT_OPTIONS, STATUS_OPTIONS } from '../../data/notificatio
 
 /** Filter tabs + sort + status dropdowns */
 export function NotificationTabs({ items, activeTab, onTabChange, sortBy, onSortChange, statusFilter, onStatusChange }) {
+  const list = Array.isArray(items) ? items : [];
   function count(tabKey) {
-    if (tabKey === 'all') return items.length;
-    return items.filter(n => n.category === tabKey).length;
+    if (tabKey === 'all') return list.length;
+    return list.filter(n => n.category === tabKey).length;
   }
 
   return (
     <div className="notif-tabs-wrap">
-      <div className="notif-tabs">
-        {NOTIF_TABS.map(t => (
-          <button
-            key={t.key}
-            id={`notif-tab-${t.key}`}
-            className={activeTab === t.key ? 'notif-tab active' : 'notif-tab'}
-            onClick={() => onTabChange(t.key)}
-          >
-            {t.label}
-            <span className="notif-tab-count">{count(t.key)}</span>
-          </button>
-        ))}
+      <div className="notif-tabs-scroll">
+        <div className="notif-tabs">
+          {NOTIF_TABS.map(t => (
+            <button
+              key={t.key}
+              id={`notif-tab-${t.key}`}
+              className={activeTab === t.key ? 'notif-tab active' : 'notif-tab'}
+              onClick={() => onTabChange(t.key)}
+            >
+              {t.label}
+              <span className="notif-tab-count">{count(t.key)}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="notif-filter-right">

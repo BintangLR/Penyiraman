@@ -1,5 +1,6 @@
 import React from 'react';
 import { ZONES_SUMMARY } from '../../data/graphData';
+import { getPlantImage, getPlantImageFallback } from '../../data/plantImages';
 
 const statusStyle = {
   Kering: { color: '#d63f3f', bg: '#fdeeee', bar: '#e55353' },
@@ -25,10 +26,20 @@ export function ZoneStatistics({ data = ZONES_SUMMARY, onSelectZone }) {
             {/* Thumbnail */}
             <div className="zone-stat-thumb">
               <img
-                src={zone.image}
-                alt={zone.plant}
+                src={getPlantImage(zone)}
+                alt={`Tanaman ${zone.plant}`}
                 loading="lazy"
-                onError={e => { e.target.style.display = 'none'; }}
+                onError={e => {
+                  const preferred = getPlantImage(zone);
+                  const fallback = getPlantImageFallback(zone)
+                    || (zone.image && zone.image !== preferred ? zone.image : '');
+                  if (fallback && e.currentTarget.src !== fallback) {
+                    e.currentTarget.onerror = () => { e.currentTarget.style.display = 'none'; };
+                    e.currentTarget.src = fallback;
+                  } else {
+                    e.currentTarget.style.display = 'none';
+                  }
+                }}
               />
             </div>
 

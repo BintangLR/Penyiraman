@@ -7,7 +7,6 @@ import { ScheduleForm } from '../components/schedule/ScheduleForm';
 import { ConfirmDialog } from '../components/schedule/ConfirmDialog';
 import { WaterUsageCard } from '../components/schedule/WaterUsageCard';
 import { ScheduleSummaryCard } from '../components/schedule/ScheduleSummaryCard';
-import { ScheduledHistory } from '../components/schedule/ScheduledHistory';
 
 let nextId = 10;
 
@@ -94,14 +93,6 @@ export function SchedulePage({ onNavigate }) {
             Atur jadwal penyiraman otomatis untuk setiap zona sesuai kebutuhan tanaman.
           </p>
         </div>
-        <button
-          id="btn-tambah-jadwal"
-          className="primary-btn"
-          style={{ width: 'auto', padding: '10px 18px', fontSize: 12, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 7 }}
-          onClick={handleAddNew}
-        >
-          <span style={{ fontSize: 14 }}>+</span> Tambah Jadwal
-        </button>
       </div>
 
       {/* ── Summary cards ───────────────────────────────────────────────── */}
@@ -119,6 +110,7 @@ export function SchedulePage({ onNavigate }) {
             onTabChange={tab => setActiveTab(tab)}
             sortBy={sortBy}
             onSortChange={v => setSortBy(v)}
+            onAdd={handleAddNew}
           />
 
           {/* Schedule list */}
@@ -145,9 +137,6 @@ export function SchedulePage({ onNavigate }) {
           <ScheduleSummaryCard schedules={schedules} />
         </div>
       </div>
-
-      {/* ── Riwayat terjadwal ───────────────────────────────────────────── */}
-      <ScheduledHistory history={history} onViewAll={() => onNavigate && onNavigate('Riwayat')} />
 
       {/* ── Modals ─────────────────────────────────────────────────────── */}
       <ScheduleForm

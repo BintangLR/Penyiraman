@@ -1,20 +1,23 @@
 import React from 'react';
-import { WATERING_DATA } from '../../data/graphData';
 
 /**
  * Combination chart: Bar (jumlah penyiraman) + Line (durasi menit)
  */
-export function WateringCombinedChart() {
+export function WateringCombinedChart({ data = [], hasRecords = false }) {
   const [tooltip, setTooltip] = React.useState(null);
-  const { labels, count, duration } = WATERING_DATA;
+  if (!hasRecords || !data.length) return <div className="graphics-empty" role="status">Tidak ada data pada rentang tanggal ini</div>;
+
+  const labels = data.map(item => item.label);
+  const count = data.map(item => item.count);
+  const duration = data.map(item => item.duration);
 
   const W = 460, H = 220;
   const pad = { l: 36, r: 36, t: 16, b: 36 };
   const innerW = W - pad.l - pad.r;
   const innerH = H - pad.t - pad.b;
 
-  const maxCount = Math.max(...count) + 2;
-  const maxDur   = Math.max(...duration) + 20;
+  const maxCount = Math.max(...count, 1) + 2;
+  const maxDur   = Math.max(...duration, 1) + 20;
 
   const barW = innerW / labels.length * 0.45;
   const xOf  = i => pad.l + (i + 0.5) * (innerW / labels.length);
@@ -34,18 +37,24 @@ export function WateringCombinedChart() {
         onMouseLeave={() => setTooltip(null)}
       >
         {/* Grid Y kiri */}
-        {[0, 2, 4, 6, 8].map(v => (
-          <g key={v}>
-            <line x1={pad.l} x2={W - pad.r} y1={yCount(v)} y2={yCount(v)}
-              stroke="#edf2ef" strokeWidth="1" />
-            <text x={pad.l - 5} y={yCount(v) + 4} textAnchor="end" fontSize="8.5" fill="#95a8a0">{v}</text>
-          </g>
-        ))}
+        {[0, 0.25, 0.5, 0.75, 1].map(fraction => {
+          const value = Math.round(maxCount * fraction);
+          return (
+            <g key={fraction}>
+              <line x1={pad.l} x2={W - pad.r} y1={yCount(value)} y2={yCount(value)}
+                stroke="#edf2ef" strokeWidth="1" />
+              <text x={pad.l - 5} y={yCount(value) + 4} textAnchor="end" fontSize="8.5" fill="#95a8a0">{value}</text>
+            </g>
+          );
+        })}
 
         {/* Grid Y kanan (durasi) */}
-        {[0, 20, 40, 60, 80].map(v => (
-          <text key={v} x={W - pad.r + 5} y={yDur(v) + 4} fontSize="8.5" fill="#f97316">{v}</text>
-        ))}
+        {[0, 0.25, 0.5, 0.75, 1].map(fraction => {
+          const value = Math.round(maxDur * fraction);
+          return (
+            <text key={fraction} x={W - pad.r + 5} y={yDur(value) + 4} fontSize="8.5" fill="#f97316">{value}</text>
+          );
+        })}
 
         {/* Bars */}
         {count.map((v, i) => (
@@ -82,7 +91,9 @@ export function WateringCombinedChart() {
 
         {/* X labels */}
         {labels.map((d, i) => (
+          i % Math.max(1, Math.ceil(labels.length / 8)) !== 0 && i !== labels.length - 1 ? null : (
           <text key={d} x={xOf(i)} y={H - 8} textAnchor="middle" fontSize="8.5" fill="#95a8a0">{d}</text>
+          )
         ))}
 
         {/* Y axis label left */}

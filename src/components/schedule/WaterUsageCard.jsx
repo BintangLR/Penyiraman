@@ -3,7 +3,8 @@ const COLORS = ['#10a67a', '#e55353', '#2878d6', '#f59e0b', '#8b5cf6', '#f97316'
 
 /** Card penggunaan air hari ini — sidebar kanan */
 export function WaterUsageCard({ history = [] }) {
-  const usage = Object.values(history.reduce((result, row) => {
+  const rows = Array.isArray(history) ? history : [];
+  const usage = Object.values(rows.reduce((result, row) => {
     const key = row.zoneId || row.zoneName;
     if (!result[key]) result[key] = { zoneId: row.zoneId, zoneName: row.zoneName, used: 0 };
     result[key].used += Number(row.waterVolume || 0);

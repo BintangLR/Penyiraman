@@ -1,11 +1,11 @@
 import React from 'react';
-import { MOISTURE_HISTORY, AVG_MOISTURE, DAYS_7, ZONE_COLORS } from '../../data/graphData';
+import { ZONE_COLORS } from '../../data/graphData';
 
 /**
  * Line chart SVG kelembapan – 9 zona + rata-rata.
  * Fitur: hover tooltip, legend, gridlines, animasi ringan.
  */
-export function MoistureLineChart({ activeZones = 'all', data = [] }) {
+export function MoistureLineChart({ activeZones = 'all', data = [], labels = [] }) {
   const [tooltip, setTooltip] = React.useState(null);
   const [hoverDay, setHoverDay] = React.useState(null);
 
@@ -15,42 +15,62 @@ export function MoistureLineChart({ activeZones = 'all', data = [] }) {
   const innerH = H - pad.t - pad.b;
 
   const gridVals = [0, 20, 40, 60, 80, 100];
-  const days = DAYS_7;
+  const days = labels;
+  const hoverZoneWidth = days.length < 2 ? innerW : innerW / (days.length - 1);
 
-  const xOf = i => pad.l + (i / (days.length - 1)) * innerW;
+  const xOf = i => pad.l + (days.length < 2 ? 0.5 : i / (days.length - 1)) * innerW;
   const yOf = v => pad.t + ((100 - v) / 100) * innerH;
 
-  // Filter series berdasarkan activeZones
+  const isAllZones = activeZones === 'all';
+  const activeZoneIds = Array.isArray(activeZones)
+    ? new Set(activeZones.map(String))
+    : null;
+
+  // Filter series berdasarkan satu zona atau kumpulan zona hasil filter status.
   const liveSeries = data
-    .filter(zone => Array.isArray(zone.moistureHistory) && zone.moistureHistory.length > 1)
-    .map(zone => ({ zoneId: zone.id, label: zone.name || `Zona ${zone.id}`, data: zone.moistureHistory.map(Number) }));
-  const sourceSeries = liveSeries.length ? liveSeries : MOISTURE_HISTORY;
-  const series = activeZones === 'all'
+    .filter(zone => Array.isArray(zone.moistureHistory) && zone.moistureHistory.some(Number.isFinite))
+    .map(zone => ({
+      zoneId: zone.id,
+      label: zone.name || `Zona ${zone.id}`,
+      data: zone.moistureHistory.map(value => value === null || value === undefined ? null : Number(value)),
+    }));
+  const sourceSeries = liveSeries;
+  const series = isAllZones
     ? sourceSeries
-    : sourceSeries.filter(z => String(z.zoneId) === String(activeZones));
-  const averageSeries = sourceSeries.length
-    ? DAYS_7.map((_, day) => Math.round(sourceSeries.reduce((sum, zone) => sum + Number(zone.data[day] || 0), 0) / sourceSeries.length))
-    : AVG_MOISTURE;
+    : sourceSeries.filter(z => activeZoneIds
+      ? activeZoneIds.has(String(z.zoneId))
+      : String(z.zoneId) === String(activeZones));
+  const averageSource = series.length ? series : sourceSeries;
+  const averageSeries = days.map((_, day) => {
+    const values = averageSource.map(zone => zone.data[day]).filter(Number.isFinite);
+    return values.length ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length) : null;
+  });
+  const showAverage = isAllZones || series.length > 1;
+  if (!series.length) return <div className="graphics-empty" role="status">Tidak ada data pada rentang tanggal ini</div>;
 
   // Build smooth polyline points
   function pts(data) {
-    return data.map((v, i) => `${xOf(i)},${yOf(v)}`).join(' ');
+    return data.map((v, i) => Number.isFinite(v) ? `${xOf(i)},${yOf(v)}` : null).filter(Boolean).join(' ');
   }
 
   // Area fill path
   function areaPath(data, color) {
-    const linePoints = data.map((v, i) => `${xOf(i)},${yOf(v)}`).join(' L ');
-    return `M ${xOf(0)},${yOf(data[0])} L ${linePoints} L ${xOf(data.length - 1)},${H - pad.b} L ${xOf(0)},${H - pad.b} Z`;
+    const points = data.map((v, i) => Number.isFinite(v) ? { x: xOf(i), y: yOf(v) } : null).filter(Boolean);
+    if (!points.length) return '';
+    const linePoints = points.map(point => `${point.x},${point.y}`).join(' L ');
+    return `M ${points[0].x},${points[0].y} L ${linePoints} L ${points[points.length - 1].x},${H - pad.b} L ${points[0].x},${H - pad.b} Z`;
   }
 
   function handleMouseMove(e, dayIdx) {
     const rect = e.currentTarget.getBoundingClientRect();
+    const tooltipWidth = Math.min(180, Math.max(140, rect.width - 16));
+    const maxX = Math.max(8, rect.width - tooltipWidth);
     setHoverDay(dayIdx);
     setTooltip({
-      x: e.clientX - rect.left,
+      x: Math.min(Math.max(e.clientX - rect.left + 14, 8), maxX),
       y: e.clientY - rect.top,
       day: days[dayIdx],
-      values: series.map((z, i) => ({ label: z.label, val: z.data[dayIdx], color: ZONE_COLORS[z.zoneId - 1] })),
+      values: series.filter(z => Number.isFinite(z.data[dayIdx])).map(z => ({ label: z.label, val: z.data[dayIdx], color: ZONE_COLORS[z.zoneId - 1] })),
       avg: averageSeries[dayIdx],
     });
   }
@@ -78,9 +98,9 @@ export function MoistureLineChart({ activeZones = 'all', data = [] }) {
         {days.map((d, i) => (
           <rect
             key={i}
-            x={xOf(i) - innerW / (days.length - 1) / 2}
+            x={days.length < 2 ? pad.l : xOf(i) - hoverZoneWidth / 2}
             y={pad.t}
-            width={innerW / (days.length - 1)}
+            width={hoverZoneWidth}
             height={innerH}
             fill="transparent"
             style={{ cursor: 'crosshair' }}
@@ -102,7 +122,7 @@ export function MoistureLineChart({ activeZones = 'all', data = [] }) {
           const color = ZONE_COLORS[z.zoneId - 1];
           return (
             <g key={z.zoneId}>
-              {activeZones === 'all' ? null : (
+              {showAverage ? null : (
                 <path d={areaPath(z.data, color)} fill={color} opacity="0.07" />
               )}
               <polyline
@@ -128,7 +148,7 @@ export function MoistureLineChart({ activeZones = 'all', data = [] }) {
         })}
 
         {/* Average line */}
-        {activeZones === 'all' && (
+        {showAverage && tooltip && Number.isFinite(tooltip.avg) && (
           <polyline
             points={pts(averageSeries)}
             fill="none"
@@ -152,7 +172,7 @@ export function MoistureLineChart({ activeZones = 'all', data = [] }) {
         <div
           className="chart-tooltip"
           style={{
-            left: Math.min(tooltip.x + 14, W - 160),
+            left: tooltip.x,
             top: Math.max(tooltip.y - 80, 8),
           }}
         >
@@ -167,7 +187,7 @@ export function MoistureLineChart({ activeZones = 'all', data = [] }) {
           {tooltip.values.length > 5 && (
             <div className="chart-tooltip-more">+{tooltip.values.length - 5} lainnya...</div>
           )}
-          {activeZones === 'all' && (
+          {showAverage && (
             <div className="chart-tooltip-row" style={{ borderTop: '1px solid #e5ece8', marginTop: 4, paddingTop: 4 }}>
               <i className="chart-tooltip-dot" style={{ background: '#64748b' }} />
               <span>Rata-rata</span>
@@ -185,10 +205,18 @@ export function MoistureLineChart({ activeZones = 'all', data = [] }) {
  */
 export function MoistureLegend({ activeZones, data = [] }) {
   const liveSeries = data
-    .filter(zone => Array.isArray(zone.moistureHistory) && zone.moistureHistory.length > 1)
+    .filter(zone => Array.isArray(zone.moistureHistory) && zone.moistureHistory.some(Number.isFinite))
     .map(zone => ({ zoneId: zone.id, label: zone.name || `Zona ${zone.id}` }));
-  const sourceSeries = liveSeries.length ? liveSeries : MOISTURE_HISTORY;
-  const show = activeZones === 'all' ? sourceSeries : sourceSeries.filter(z => String(z.zoneId) === String(activeZones));
+  const sourceSeries = liveSeries;
+  const isAllZones = activeZones === 'all';
+  const activeZoneIds = Array.isArray(activeZones)
+    ? new Set(activeZones.map(String))
+    : null;
+  const show = isAllZones
+    ? sourceSeries
+    : sourceSeries.filter(z => activeZoneIds
+      ? activeZoneIds.has(String(z.zoneId))
+      : String(z.zoneId) === String(activeZones));
   return (
     <div className="graph-legend">
       {show.map(z => (
@@ -197,7 +225,7 @@ export function MoistureLegend({ activeZones, data = [] }) {
           {z.label}
         </span>
       ))}
-      {activeZones === 'all' && (
+      {(isAllZones || show.length > 1) && (
         <span className="graph-legend-item">
           <svg width="16" height="8" style={{ flexShrink: 0 }}>
             <line x1="0" y1="4" x2="16" y2="4" stroke="#64748b" strokeWidth="2" strokeDasharray="4 2" />
